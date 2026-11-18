@@ -167,7 +167,7 @@ cp .env.example .env          # troque as senhas
 docker compose up -d --build  # sobe MySQL, Postgres, Airflow webserver e scheduler
 ```
 
-1. Acesse http://localhost:8080 com `admin` / `admin_local`
+1. Acesse http://localhost:8080 com as credenciais de `AIRFLOW_ADMIN_USER` / `AIRFLOW_ADMIN_PASSWORD` definidas no `.env` (as evidências usaram `admin` / `admin_local`)
 2. Dispare `citizentech_gtfs_sptrans` (▶ Trigger DAG)
 3. Dispare `citizentech_indicadores_reconhecimento` com `{"simular": true}`
 4. Dados disponíveis no MySQL (porta 3306 em 127.0.0.1)

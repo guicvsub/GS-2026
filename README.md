@@ -28,6 +28,14 @@ As tecnologias e funcionalidades ainda podem ser ajustadas durante o desenvolvim
 | Pedro Henrique Mello Silva Alves | RM554223 |
 | Gabriel Borba | RM553187 |
 
+## 📊 Componente Dados — Big Data Architecture & Data Integration
+
+Pipeline orquestrado no Apache Airflow que leva o GTFS da SPTrans do dado bruto até tabelas curadas no MySQL, com dicionário de dados, diagrama de arquitetura e prints de execução.
+
+- [README do componente Dados](GS/GS/citizentech-dados/README.md)
+- [PDF único de entrega (arquitetura + dicionário + evidências)](GS/GS/citizentech-dados/docs/Entrega_BigData_CitizenTech.pdf)
+- [Prints do Airflow](GS/GS/citizentech-dados/docs/evidencias/prints_airflow/)
+
 ## Status
 
 Projeto em desenvolvimento. A cidade piloto, as fontes de dados e os detalhes de implementação serão definidos pela equipe.
