@@ -21,8 +21,17 @@ Este repositório materializa o componente **"Dados"** do MVP da CitizenTech. O 
 - ✅ **Pipeline funcional** — DAGs Airflow executando ETL/ELT de ponta a ponta
 - ✅ **Arquitetura em camadas** — Raw → Staging (Parquet) → Curada (MySQL 8.4)
 - ✅ **Dicionário de dados** — Todas as tabelas com tipos, chaves e exemplos
-- ✅ **PDF de entrega** — Diagrama de arquitetura + dicionário de dados em um único arquivo
-- ✅ **Prints do Airflow** — Evidências de execução abaixo
+- ✅ **PDF de entrega** — [Diagrama de arquitetura + dicionário + evidências em um único arquivo](docs/Entrega_BigData_CitizenTech.pdf)
+- ✅ **Prints do Airflow** — Evidências de execução exibidas abaixo
+
+## 📎 Entrega
+
+| Item | Link |
+|---|---|
+| Repositório | https://github.com/guicvsub/GS-2026 |
+| PDF único (arquitetura + dicionário + evidências) | [`docs/Entrega_BigData_CitizenTech.pdf`](docs/Entrega_BigData_CitizenTech.pdf) |
+| Prints do Airflow | [`docs/evidencias/prints_airflow/`](docs/evidencias/prints_airflow/) |
+| Página navegável de evidências | [`docs/evidencias/evidencias_web.html`](docs/evidencias/evidencias_web.html) |
 
 ---
 
@@ -135,12 +144,12 @@ As imagens abaixo são exibidas **diretamente neste README** e comprovam o pipel
 
 Dicionário completo disponível em: [docs/dicionario_de_dados.md](docs/dicionario_de_dados.md)
 
-Tabelas principais:
-- `linha` — 1.365 linhas de ônibus (route_id, número, nome, cor)
-- `letreiro` — 2.268 letreiros (vocabulário do OCR)
-- `parada` — 22.270 paradas com coordenadas (lat, lon)
-- `itinerario` — 99.071 sequências de paradas por letreiro
-- `frequencia` — 40.337 faixas horárias com intervalos
+Tabelas principais (contagens da última carga, sha256 `ae07f1c3…`):
+- `linha` — 1.366 linhas de ônibus (route_id, número, nome, cor)
+- `letreiro` — 2.269 letreiros (vocabulário do OCR)
+- `parada` — 22.266 paradas com coordenadas (lat, lon)
+- `itinerario` — 99.031 sequências de paradas por letreiro
+- `frequencia` — 40.353 faixas horárias com intervalos
 - `evento_reconhecimento` — 500 eventos de reconhecimento do app
 - `indicador_reconhecimento_diario` — Indicadores diários de impacto
 - `carga_controle` — Linhagem: versão do feed, status e contagens por carga
@@ -170,19 +179,20 @@ python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 .venv\Scripts\python -m pipeline.run_local tudo      # GTFS + simulação + indicadores
 .venv\Scripts\python -m pipeline.run_local gtfs      # reexecução: status "ignorada" (idempotente)
-.venv\Scripts\python -m pytest -q                    # 10 testes
-.venv\Scripts\python -m scripts.gerar_documentação   # dicionário + consultas
+.venv\Scripts\python -m pytest tests -q              # 10 testes
+.venv\Scripts\python -m scripts.gerar_documentacao    # dicionário + consultas
+.venv\Scripts\python -m scripts.gerar_pdf             # PDF único de entrega
 ```
 
 ### Opção C — GitHub Actions
 
-O workflow `.github/workflows/pipeline.yml` roda a cada push: testes, carga dos DAGs no Airflow 2.10.5, `airflow dags test`, reexecução para provar idempotência e conferência de contagens. Logs e `letreiros.json` ficam como artefato `evidencias-pipeline`.
+O workflow fica na **raiz do repositório** (`.github/workflows/pipeline.yml`, exigência do GitHub Actions) e roda a cada push que altere este projeto: testes, carga dos DAGs no Airflow 2.10.5, `airflow dags test`, reexecução para provar idempotência e conferência de contagens no MySQL 8.4. Logs e `letreiros.json` ficam como artefato `evidencias-pipeline`.
 
 ---
 
 ## 📦 Dados: Origem, Licença e Decisões
 
-- **GTFS SPTrans** — via espelho público do [Mobility Database](https://mobilitydatabase.org) (`mdb-8`), sem cadastro necessário. Versão carregada: sha256 `457293b83e34…` (atualizado em 10/11/2026).
+- **GTFS SPTrans** — via espelho público do [Mobility Database](https://mobilitydatabase.org) (`mdb-8`), sem cadastro necessário. Última versão carregada: sha256 `ae07f1c3…` (13/11/2026). A versão anterior (`457293b8…`) também está documentada nos logs de evidência.
 - **Eventos simulados** — Enquanto não há testes de campo, o DAG 2 gera eventos marcados `origem = 'simulado'` com premissas documentadas em `pipeline/simulacao.py`. **Não são resultados medidos do produto.**
 - **Tempo real (Olho Vivo)** — Não está no MVP; exige token e não é necessário para o fluxo central.
 - **shapes.txt (60 MB)** — Fica apenas no Raw; o app não desenha o traçado, só precisa da sequência de paradas.

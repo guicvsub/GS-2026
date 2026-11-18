@@ -1,14 +1,27 @@
 # Roda a cada push: testes + execução real dos dois DAGs no Airflow 2.10.5,
 # carregando num MySQL 8.4 efêmero. Os logs e o pacote offline ficam como
 # artefatos da execução (evidência do pipeline rodando).
+#
+# O projeto de dados fica em GS/GS/citizentech-dados; os caminhos abaixo
+# apontam para essa pasta porque o GitHub Actions só lê workflows na raiz.
 name: pipeline-dados
 
 on:
   push:
+    paths:
+      - "GS/GS/citizentech-dados/**"
+      - ".github/workflows/pipeline.yml"
   pull_request:
+    paths:
+      - "GS/GS/citizentech-dados/**"
+      - ".github/workflows/pipeline.yml"
   workflow_dispatch:
   schedule:
     - cron: "0 7 * * 1"  # segunda 04:00 em SP: confirma que o feed real continua válido
+
+defaults:
+  run:
+    working-directory: GS/GS/citizentech-dados
 
 jobs:
   airflow:
@@ -26,16 +39,13 @@ jobs:
         options: >-
           --health-cmd="mysqladmin ping -h localhost -uroot -pci-root-efemero"
           --health-interval=10s --health-retries=10
-    defaults:
-      run:
-        shell: bash  # bash -eo pipefail: o `| tee` não esconde falha
     env:
       AIRFLOW_HOME: ${{ github.workspace }}/.airflow
-      AIRFLOW__CORE__DAGS_FOLDER: ${{ github.workspace }}/dags
+      AIRFLOW__CORE__DAGS_FOLDER: ${{ github.workspace }}/GS/GS/citizentech-dados/dags
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__DEFAULT_TIMEZONE: America/Sao_Paulo
-      PYTHONPATH: ${{ github.workspace }}
-      CITIZENTECH_DATA_DIR: ${{ github.workspace }}/data
+      PYTHONPATH: ${{ github.workspace }}/GS/GS/citizentech-dados
+      CITIZENTECH_DATA_DIR: ${{ github.workspace }}/GS/GS/citizentech-dados/data
       CITIZENTECH_DB_URL: mysql+pymysql://citizentech:ci-efemero@127.0.0.1:3306/citizentech?charset=utf8mb4
     steps:
       - uses: actions/checkout@v4
@@ -44,10 +54,10 @@ jobs:
           python-version: "3.12"
       - name: Instalar Airflow 2.10.5 + dependências (constraints oficiais)
         run: |
-          pip install "apache-airflow==2.10.5" PyMySQL pyarrow cryptography pytest \
+          pip install -r requirements.txt "apache-airflow==2.10.5" \
             --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"
       - name: Testes unitários
-        run: pytest -q
+        run: pytest tests -q
       - name: DAGs carregam sem erro
         run: |
           airflow db migrate
@@ -83,9 +93,9 @@ jobs:
         with:
           name: evidencias-pipeline
           path: |
-            dag1.log
-            dag1_reexecucao.log
-            dag2.log
-            contagens.txt
-            data/serving/letreiros.json
+            GS/GS/citizentech-dados/dag1.log
+            GS/GS/citizentech-dados/dag1_reexecucao.log
+            GS/GS/citizentech-dados/dag2.log
+            GS/GS/citizentech-dados/contagens.txt
+            GS/GS/citizentech-dados/data/serving/letreiros.json
             .airflow/logs/

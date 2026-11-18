@@ -27,6 +27,45 @@ DOCS = RAIZ / "docs"
 GERADO = DOCS / "_gerado"
 EVID = DOCS / "evidencias"
 
+# Valores padrão da equipe (podem ser sobrescritos pelas variáveis de ambiente).
+EQUIPE_PADRAO = (
+    "Guilherme Santiago da Silva (RM552321), Gustavo Govea Soares (RM553842), "
+    "Pedro Henrique Mello Silva Alves (RM554223), Gabriel Borba (RM553187)"
+)
+REPO_PADRAO = "https://github.com/guicvsub/GS-2026"
+VIDEO_PADRAO = (
+    "https://github.com/guicvsub/GS-2026/tree/master/GS/GS/citizentech-dados/docs/evidencias/prints_airflow"
+)
+
+LEGENDAS_PRINTS = {
+    "00_airflow_login.png": "00 · Tela de login do Airflow (localhost:8080)",
+    "01_airflow_home_dags.png": "01 · Visão geral dos dois DAGs ativos",
+    "02_dag_gtfs_grid.png": "02 · Grid da DAG 1 — execução e reexecução (short-circuit)",
+    "03_dag_gtfs_graph.png": "03 · Grafo de dependências da DAG 1",
+    "04_dag_indicadores_grid.png": "04 · Grid da DAG 2 — indicadores de reconhecimento",
+    "05_dag_indicadores_graph.png": "05 · Grafo da DAG 2",
+    "06_dagruns_gtfs.png": "06 · Histórico de execuções da DAG 1",
+    "07_dagruns_indicadores.png": "07 · Histórico de execuções da DAG 2",
+}
+
+
+def _prints() -> str:
+    """Monta a seção de prints com as imagens embutidas no PDF."""
+    arquivos = sorted((EVID / "prints_airflow").glob("*.png"))
+    if not arquivos:
+        return '<span class="preencher">[Nenhum print encontrado em docs/evidencias/prints_airflow/]</span>'
+    blocos = []
+    for arq in arquivos:
+        legenda = LEGENDAS_PRINTS.get(arq.name, arq.stem.replace("_", " "))
+        blocos.append(
+            '<figure style="margin:10px 0;break-inside:avoid">'
+            f'<img src="evidencias/prints_airflow/{arq.name}" alt="{html.escape(legenda)}" '
+            'style="width:100%;border:1px solid #e2e8f0;border-radius:6px">'
+            f'<figcaption style="font-size:9pt;color:#475569;margin-top:3px">{html.escape(legenda)}</figcaption>'
+            "</figure>"
+        )
+    return "".join(blocos)
+
 
 def _preencher(valor: str | None, texto: str, link: bool = False) -> str:
     if not valor:
@@ -82,16 +121,13 @@ def main() -> None:
     svg = (DOCS / "arquitetura.svg").read_text(encoding="utf-8")
     svg = svg.replace('width="1000" height="560"', "", 1)  # deixa o CSS controlar o tamanho
 
-    prints = os.getenv("ENTREGA_PRINTS") or (
-        '<span class="preencher">[Inserir aqui os prints do Airflow: grid dos dois DAGs com as tasks em verde, '
-        'log da task <code>carregar</code> e o gráfico do DAG. Também valem o link da execução do GitHub Actions '
-        '(artefato <code>evidencias-pipeline</code>) ou o vídeo curto.]</span>')
+    prints = os.getenv("ENTREGA_PRINTS") or _prints()
 
     pagina = (DOCS / "entrega_template.html").read_text(encoding="utf-8")
     trocas = {
-        "{{EQUIPE}}": _preencher(os.getenv("ENTREGA_EQUIPE"), "nomes e RMs dos integrantes"),
-        "{{REPO}}": _preencher(os.getenv("ENTREGA_REPO"), "link público do repositório", link=True),
-        "{{VIDEO}}": _preencher(os.getenv("ENTREGA_VIDEO"), "link do vídeo ou dos prints", link=True),
+        "{{EQUIPE}}": _preencher(os.getenv("ENTREGA_EQUIPE") or EQUIPE_PADRAO, "nomes e RMs dos integrantes"),
+        "{{REPO}}": _preencher(os.getenv("ENTREGA_REPO") or REPO_PADRAO, "link público do repositório", link=True),
+        "{{VIDEO}}": _preencher(os.getenv("ENTREGA_VIDEO") or VIDEO_PADRAO, "link do vídeo ou dos prints", link=True),
         "{{DATA}}": datetime.now().strftime("%d/%m/%Y"),
         "{{KPIS}}": _kpis(contagem),
         "{{DIAGRAMA}}": svg,
