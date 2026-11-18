@@ -2,6 +2,8 @@
 
 **Global Solution 2026.2 · Engenharia de Software 4º ano · Big Data Architecture & Data Integration**
 
+[![CI pipeline-dados](https://github.com/guicvsub/GS-2026/actions/workflows/pipeline.yml/badge.svg?branch=master)](https://github.com/guicvsub/GS-2026/actions/workflows/pipeline.yml)
+
 ## 👥 Equipe
 
 | Integrante | RM |
@@ -32,6 +34,7 @@ Este repositório materializa o componente **"Dados"** do MVP da CitizenTech. O 
 | PDF único (arquitetura + dicionário + evidências) | [`docs/Entrega_BigData_CitizenTech.pdf`](docs/Entrega_BigData_CitizenTech.pdf) |
 | Prints do Airflow | [`docs/evidencias/prints_airflow/`](docs/evidencias/prints_airflow/) |
 | Página navegável de evidências | [`docs/evidencias/evidencias_web.html`](docs/evidencias/evidencias_web.html) |
+| CI (GitHub Actions) | [workflow `pipeline-dados`](https://github.com/guicvsub/GS-2026/actions/workflows/pipeline.yml) — testes + execução real das duas DAGs no Airflow |
 
 ---
 

@@ -30,6 +30,8 @@ As tecnologias e funcionalidades ainda podem ser ajustadas durante o desenvolvim
 
 ## 📊 Componente Dados — Big Data Architecture & Data Integration
 
+[![CI pipeline-dados](https://github.com/guicvsub/GS-2026/actions/workflows/pipeline.yml/badge.svg?branch=master)](https://github.com/guicvsub/GS-2026/actions/workflows/pipeline.yml)
+
 Pipeline orquestrado no Apache Airflow que leva o GTFS da SPTrans do dado bruto até tabelas curadas no MySQL, com dicionário de dados, diagrama de arquitetura e prints de execução.
 
 - [README do componente Dados](GS/GS/citizentech-dados/README.md)
