@@ -1,0 +1,299 @@
+<h4>Linhagem (carga_controle)</h4><pre class='sql'>SELECT execucao_id, status, sha256_arquivo, linhas_carregadas FROM carga_controle ORDER BY iniciada_em</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>execucao_id</th>
+      <th>status</th>
+      <th>sha256_arquivo</th>
+      <th>linhas_carregadas</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>gtfs_20261112T013707487421_457293b8</td>
+      <td>sucesso</td>
+      <td>457293b83e34e95e2f8d246dd22f9934525c5941d863d5f26b933cd9238f4166</td>
+      <td>{"linha": 1365, "parada": 22270, "letreiro": 2268, "itinerario": 99071, "frequencia": 40337}</td>
+    </tr>
+    <tr>
+      <td>gtfs_20261112T013714108855_457293b8</td>
+      <td>ignorada</td>
+      <td>457293b83e34e95e2f8d246dd22f9934525c5941d863d5f26b933cd9238f4166</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>gtfs_20261113T202011192633_ae07f1c3</td>
+      <td>sucesso</td>
+      <td>ae07f1c3daa87eafc11cca8729c34eecdb9d82ecaabb2d7888ed46dc1c8794cc</td>
+      <td>{"linha": 1366, "parada": 22266, "letreiro": 2269, "itinerario": 99031, "frequencia": 40353}</td>
+    </tr>
+    <tr>
+      <td>gtfs_20261113T232324906301_ae07f1c3</td>
+      <td>ignorada</td>
+      <td>ae07f1c3daa87eafc11cca8729c34eecdb9d82ecaabb2d7888ed46dc1c8794cc</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Letreiros da linha 8000-10 (o que o OCR precisa reconhecer)</h4><pre class='sql'>SELECT letreiro_id, texto_letreiro, texto_normalizado FROM letreiro WHERE route_id = &#x27;8000-10&#x27;</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>letreiro_id</th>
+      <th>texto_letreiro</th>
+      <th>texto_normalizado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>8000-10_0</td>
+      <td>8000-10 Pça. Ramos De Azevedo</td>
+      <td>8000 10 PCA RAMOS DE AZEVEDO</td>
+    </tr>
+    <tr>
+      <td>8000-10_1</td>
+      <td>8000-10 Term. Lapa</td>
+      <td>8000 10 TERM LAPA</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Alerta de descida: primeiras paradas do 8000-10 sentido 0, com nome e tempo previsto</h4><pre class='sql'>SELECT i.ordem, p.nome, ROUND(i.minutos_desde_inicio, 1) AS min, i.distancia_proxima_m FROM itinerario i JOIN parada p ON p.stop_id = i.stop_id WHERE i.letreiro_id = &#x27;8000-10_0&#x27; ORDER BY i.ordem LIMIT 6</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>ordem</th>
+      <th>nome</th>
+      <th>min</th>
+      <th>distancia_proxima_m</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>Terminal Lapa - Plat. 1</td>
+      <td>0.0</td>
+      <td>343.5</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Catao B/C</td>
+      <td>2.9</td>
+      <td>232.2</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Scipiao B/C</td>
+      <td>5.9</td>
+      <td>377.1</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>Vespasiano B/C</td>
+      <td>8.8</td>
+      <td>532.5</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>Cornelia</td>
+      <td>11.7</td>
+      <td>679.8</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>Sesc Pompeia B/C</td>
+      <td>14.7</td>
+      <td>429.5</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Espera estimada sem tempo real: intervalo do 8000-10 sentido 0 por faixa</h4><pre class='sql'>SELECT hora_inicio, hora_fim, intervalo_min FROM frequencia WHERE letreiro_id = &#x27;8000-10_0&#x27; ORDER BY hora_inicio LIMIT 6</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>hora_inicio</th>
+      <th>hora_fim</th>
+      <th>intervalo_min</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>04:00:00</td>
+      <td>04:59:00</td>
+      <td>60.0</td>
+    </tr>
+    <tr>
+      <td>05:00:00</td>
+      <td>05:59:00</td>
+      <td>12.0</td>
+    </tr>
+    <tr>
+      <td>06:00:00</td>
+      <td>06:59:00</td>
+      <td>8.0</td>
+    </tr>
+    <tr>
+      <td>07:00:00</td>
+      <td>07:59:00</td>
+      <td>7.0</td>
+    </tr>
+    <tr>
+      <td>08:00:00</td>
+      <td>08:59:00</td>
+      <td>10.0</td>
+    </tr>
+    <tr>
+      <td>09:00:00</td>
+      <td>09:59:00</td>
+      <td>30.0</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Linhas que passam numa parada (ex.: a 1a parada do 8000-10)</h4><pre class='sql'>SELECT l.texto_letreiro FROM itinerario i JOIN letreiro l ON l.letreiro_id = i.letreiro_id WHERE i.stop_id = (SELECT stop_id FROM itinerario WHERE letreiro_id = &#x27;8000-10_0&#x27; AND ordem = 1) ORDER BY 1 LIMIT 8</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>texto_letreiro</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>8000-1 Pça. Ramos De Azevedo</td>
+    </tr>
+    <tr>
+      <td>8000-10 Pça. Ramos De Azevedo</td>
+    </tr>
+    <tr>
+      <td>N102-11 Term. Lapa</td>
+    </tr>
+    <tr>
+      <td>N102-11 Term. Pq. D. Pedro Ii</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Indicadores diários (origem = simulado: NÃO são resultados medidos)</h4><pre class='sql'>SELECT dia, origem, total_eventos, taxa_acerto, alertas_errados, latencia_p50_ms, taxa_acerto_noite FROM indicador_reconhecimento_diario ORDER BY dia</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>dia</th>
+      <th>origem</th>
+      <th>total_eventos</th>
+      <th>taxa_acerto</th>
+      <th>alertas_errados</th>
+      <th>latencia_p50_ms</th>
+      <th>taxa_acerto_noite</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-11-05</td>
+      <td>simulado</td>
+      <td>53</td>
+      <td>0.8140</td>
+      <td>1</td>
+      <td>885.0</td>
+      <td>0.7647</td>
+    </tr>
+    <tr>
+      <td>2026-11-06</td>
+      <td>simulado</td>
+      <td>8</td>
+      <td>1.0000</td>
+      <td>0</td>
+      <td>989.0</td>
+      <td>1.0000</td>
+    </tr>
+    <tr>
+      <td>2026-11-07</td>
+      <td>simulado</td>
+      <td>60</td>
+      <td>0.8200</td>
+      <td>1</td>
+      <td>900.0</td>
+      <td>0.7619</td>
+    </tr>
+    <tr>
+      <td>2026-11-08</td>
+      <td>simulado</td>
+      <td>74</td>
+      <td>0.7869</td>
+      <td>1</td>
+      <td>944.5</td>
+      <td>0.6957</td>
+    </tr>
+    <tr>
+      <td>2026-11-09</td>
+      <td>simulado</td>
+      <td>72</td>
+      <td>0.8276</td>
+      <td>0</td>
+      <td>869.5</td>
+      <td>0.7000</td>
+    </tr>
+    <tr>
+      <td>2026-11-10</td>
+      <td>simulado</td>
+      <td>79</td>
+      <td>0.8873</td>
+      <td>0</td>
+      <td>916.0</td>
+      <td>0.7619</td>
+    </tr>
+    <tr>
+      <td>2026-11-11</td>
+      <td>simulado</td>
+      <td>77</td>
+      <td>0.8182</td>
+      <td>0</td>
+      <td>880.0</td>
+      <td>0.7727</td>
+    </tr>
+    <tr>
+      <td>2026-11-12</td>
+      <td>simulado</td>
+      <td>75</td>
+      <td>0.8730</td>
+      <td>0</td>
+      <td>896.0</td>
+      <td>0.7500</td>
+    </tr>
+    <tr>
+      <td>2026-11-13</td>
+      <td>simulado</td>
+      <td>63</td>
+      <td>0.8491</td>
+      <td>1</td>
+      <td>902.0</td>
+      <td>0.7059</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Contrato com a visão computacional: texto do OCR → letreiro real</h4><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>texto lido pelo OCR (com ruído)</th>
+      <th>letreiro casado</th>
+      <th>score</th>
+      <th>ambíguo?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>8OOO-1O TERM. LAPA</td>
+      <td>8000-10_1</td>
+      <td>0.906</td>
+      <td>não</td>
+    </tr>
+    <tr>
+      <td>1O6A-1O METRO SANTANA</td>
+      <td>106A-10_1</td>
+      <td>0.962</td>
+      <td>não</td>
+    </tr>
+    <tr>
+      <td>107T-10 TERM PINHEIROS</td>
+      <td>107T-10_0</td>
+      <td>1.000</td>
+      <td>não</td>
+    </tr>
+    <tr>
+      <td>PCA RAMOS DE AZEVEDO</td>
+      <td>8000-1_0</td>
+      <td>0.851</td>
+      <td>sim, empata com 8700-1_0: app não alerta</td>
+    </tr>
+  </tbody>
+</table>

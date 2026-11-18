@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Pipeline de Dados do MVP CitizenTech</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 16mm 14mm; }
+  :root { --tinta: #0f172a; --suave: #475569; --linha: #e2e8f0; --acento: #15803d; --fundo: #f8fafc; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; color: var(--tinta); font-size: 10.5pt; line-height: 1.45; margin: 0; background: #fff; }
+  h1 { font-size: 22pt; margin: 0 0 4px; letter-spacing: -.01em; }
+  h2 { font-size: 14pt; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--tinta); break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 16px 0 4px; break-after: avoid; }
+  h4 { font-size: 10.5pt; margin: 14px 0 4px; break-after: avoid; }
+  p { margin: 4px 0 8px; }
+  a { color: #1d4ed8; }
+  code, pre, .tab { font-family: Consolas, Menlo, monospace; font-size: 9pt; }
+  .capa { border-left: 6px solid var(--acento); padding: 6px 0 6px 16px; margin-bottom: 18px; }
+  .capa .sub { color: var(--suave); font-size: 11pt; }
+  .meta { display: grid; grid-template-columns: 150px 1fr; gap: 3px 12px; font-size: 10pt; margin-top: 10px; }
+  .meta b { color: var(--suave); font-weight: 600; }
+  .preencher { background: #fef9c3; padding: 0 4px; border-radius: 3px; }
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0; }
+  .kpi { border: 1px solid var(--linha); border-radius: 8px; padding: 8px 10px; background: var(--fundo); }
+  .kpi .v { font-size: 15pt; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi .r { font-size: 8.5pt; color: var(--suave); }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0 10px; font-size: 9pt; }
+  th, td { border-bottom: 1px solid var(--linha); padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: var(--fundo); font-weight: 600; }
+  tr { break-inside: avoid; }
+  td.ex { color: var(--suave); font-family: Consolas, Menlo, monospace; font-size: 8.5pt; word-break: break-all; }
+  .tabela h3 .n { font-weight: 400; color: var(--suave); font-size: 9.5pt; margin-left: 6px; }
+  pre { background: var(--fundo); border: 1px solid var(--linha); border-radius: 6px; padding: 8px 10px; white-space: pre-wrap; word-break: break-all; margin: 4px 0 8px; }
+  pre.sql { color: #334155; }
+  table.res { font-family: Consolas, Menlo, monospace; font-size: 8.5pt; }
+  .figura { border: 1px solid var(--linha); border-radius: 8px; padding: 6px; margin: 8px 0; }
+  .figura svg { width: 100%; height: auto; display: block; }
+  .nota { border-left: 3px solid #ca8a04; background: #fefce8; padding: 6px 10px; margin: 8px 0; font-size: 9.5pt; }
+  .ok { color: var(--acento); font-weight: 600; }
+  .falha { color: #b91c1c; font-weight: 600; }
+  .quebra { break-before: page; }
+  ol, ul { margin: 4px 0 8px; padding-left: 20px; }
+  li { margin: 2px 0; }
+</style>
+</head>
+<body>
+
+<div class="capa">
+  <div class="sub">FIAP · Global Solution 2026.2 · CitizenTech · Engenharia de Software 4º ano</div>
+  <h1>Pipeline de Dados do MVP CitizenTech</h1>
+  <div class="sub">Big Data Architecture &amp; Data Integration · Profa. Ana Machado</div>
+  <div class="meta">
+    <b>Produto</b><span>Assistente de mobilidade por ônibus para pessoas cegas e com baixa visão</span>
+    <b>Equipe</b><span><span class="preencher">[nomes e RMs dos integrantes]</span></span>
+    <b>Repositório</b><span><span class="preencher">[link público do repositório]</span></span>
+    <b>Vídeo / prints</b><span><span class="preencher">[link do vídeo ou dos prints]</span></span>
+    <b>Cidade piloto</b><span>São Paulo (SP) · dados da SPTrans</span>
+    <b>Gerado em</b><span>13/11/2026</span>
+  </div>
+</div>
+
+<h2>1. O que este componente entrega</h2>
+<p>O componente <b>Dados</b> é um pipeline orquestrado no Apache Airflow que leva o GTFS oficial da SPTrans do arquivo bruto até tabelas prontas no MySQL, consumidas pelo MVP em três momentos do uso: <b>reconhecer</b> o ônibus que chegou (vocabulário de letreiros para o OCR), <b>orientar</b> a viagem (sequência de paradas para o alerta de descida) e <b>estimar</b> a espera quando não há dado em tempo real (frequência por faixa horária). Um segundo DAG transforma os eventos de reconhecimento gravados pelo app em indicadores de impacto.</p>
+<div class="kpis"><div class="kpi"><div class="v">1.366</div><div class="r">linhas de ônibus</div></div><div class="kpi"><div class="v">2.269</div><div class="r">letreiros (linha × sentido)</div></div><div class="kpi"><div class="v">22.266</div><div class="r">paradas</div></div><div class="kpi"><div class="v">99.031</div><div class="r">paradas em itinerários</div></div><div class="kpi"><div class="v">40.353</div><div class="r">faixas de frequência</div></div></div>
+<p>A execução é <b>repetível e idempotente</b>: cada versão do feed é identificada pelo SHA-256; rodar de novo com a mesma versão não recarrega nada, e uma versão nova substitui a anterior em uma única transação.</p>
+
+<h2>2. Arquitetura</h2>
+<div class="figura"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560"  font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .t { font-size: 12px; fill: #0f172a; font-weight: 600; }
+      .s { font-size: 10.5px; fill: #475569; }
+      .k { font-size: 10px; fill: #64748b; letter-spacing: .06em; font-weight: 600; }
+      .lin { stroke: #475569; stroke-width: 1.4; fill: none; marker-end: url(#seta); }
+      .tab { font-size: 10.5px; fill: #0f172a; font-family: Consolas, Menlo, monospace; }
+    </style>
+  </defs>
+  <rect width="1000" height="560" fill="#ffffff"/>
+
+  <!-- rótulos de coluna -->
+  <text x="20" y="24" class="k">FONTES</text>
+  <text x="215" y="24" class="k">ORQUESTRAÇÃO E CAMADAS DE DADOS</text>
+  <text x="800" y="24" class="k">QUEM CONSOME</text>
+
+  <!-- fontes -->
+  <rect x="20" y="62" width="165" height="78" rx="8" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="32" y="85" class="t">GTFS SPTrans</text>
+  <text x="32" y="103" class="s">Mobility Database mdb-8</text>
+  <text x="32" y="118" class="s">zip ~14 MB · sem login</text>
+  <text x="32" y="133" class="s">atualização semanal</text>
+
+  <rect x="20" y="432" width="165" height="78" rx="8" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="32" y="455" class="t">App do MVP</text>
+  <text x="32" y="473" class="s">1 evento por leitura de</text>
+  <text x="32" y="488" class="s">letreiro · sem imagem,</text>
+  <text x="32" y="503" class="s">sem localização, sem nome</text>
+
+  <!-- DAG 1 -->
+  <rect x="215" y="36" width="560" height="104" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="5 4"/>
+  <text x="228" y="56" class="s">Airflow · DAG <tspan font-weight="600" fill="#0f172a">citizentech_gtfs_sptrans</tspan> · segundas 04:00 · retries 2</text>
+  <g>
+    <rect x="228" y="70" width="82" height="52" rx="6" fill="#fff" stroke="#334155"/>
+    <text x="269" y="92" class="t" text-anchor="middle">Extrair</text>
+    <text x="269" y="108" class="s" text-anchor="middle">baixa + hash</text>
+    <rect x="318" y="70" width="82" height="52" rx="6" fill="#fff" stroke="#334155"/>
+    <text x="359" y="92" class="t" text-anchor="middle">Versão nova?</text>
+    <text x="359" y="108" class="s" text-anchor="middle">short-circuit</text>
+    <rect x="408" y="70" width="82" height="52" rx="6" fill="#fff" stroke="#334155"/>
+    <text x="449" y="92" class="t" text-anchor="middle">Transformar</text>
+    <text x="449" y="108" class="s" text-anchor="middle">pandas</text>
+    <rect x="498" y="70" width="82" height="52" rx="6" fill="#fff7ed" stroke="#ea580c"/>
+    <text x="539" y="92" class="t" text-anchor="middle">Qualidade</text>
+    <text x="539" y="108" class="s" text-anchor="middle">18 checagens</text>
+    <rect x="588" y="70" width="82" height="52" rx="6" fill="#fff" stroke="#334155"/>
+    <text x="629" y="92" class="t" text-anchor="middle">Carregar</text>
+    <text x="629" y="108" class="s" text-anchor="middle">1 transação</text>
+    <rect x="678" y="70" width="86" height="52" rx="6" fill="#fff" stroke="#334155"/>
+    <text x="721" y="92" class="t" text-anchor="middle">Publicar</text>
+    <text x="721" y="108" class="s" text-anchor="middle">pacote offline</text>
+    <path d="M310,96 H316" class="lin"/>
+    <path d="M400,96 H406" class="lin"/>
+    <path d="M490,96 H496" class="lin"/>
+    <path d="M580,96 H586" class="lin"/>
+    <path d="M670,96 H676" class="lin"/>
+  </g>
+  <path d="M185,101 H226" class="lin"/>
+
+  <!-- camadas -->
+  <rect x="228" y="180" width="160" height="92" rx="8" fill="#f1f5f9" stroke="#64748b"/>
+  <text x="240" y="201" class="k">RAW · IMUTÁVEL</text>
+  <text x="240" y="220" class="tab">data/raw/gtfs/</text>
+  <text x="240" y="235" class="tab">&lt;data&gt;_&lt;sha8&gt;/feed.zip</text>
+  <text x="240" y="255" class="s">zip original + metadados</text>
+
+  <rect x="408" y="180" width="150" height="92" rx="8" fill="#ecfeff" stroke="#0891b2"/>
+  <text x="420" y="201" class="k">STAGING · PARQUET</text>
+  <text x="420" y="220" class="tab">data/staging/</text>
+  <text x="420" y="235" class="tab">&lt;execucao_id&gt;/*.parquet</text>
+  <text x="420" y="255" class="s">tipado, normalizado</text>
+
+  <rect x="588" y="168" width="187" height="250" rx="8" fill="#f0fdf4" stroke="#16a34a"/>
+  <text x="600" y="189" class="k">CURADA · MYSQL 8.4</text>
+  <text x="600" y="210" class="tab">linha</text>
+  <text x="600" y="226" class="tab">letreiro</text>
+  <text x="600" y="242" class="tab">parada</text>
+  <text x="600" y="258" class="tab">itinerario</text>
+  <text x="600" y="274" class="tab">frequencia</text>
+  <line x1="600" y1="285" x2="763" y2="285" stroke="#bbf7d0"/>
+  <text x="600" y="303" class="tab">evento_reconhecimento</text>
+  <text x="600" y="319" class="tab">indicador_reconhecimento_</text>
+  <text x="600" y="333" class="tab">  diario</text>
+  <line x1="600" y1="345" x2="763" y2="345" stroke="#bbf7d0"/>
+  <text x="600" y="363" class="tab">carga_controle</text>
+  <text x="600" y="380" class="s">linhagem: versão (sha256),</text>
+  <text x="600" y="395" class="s">status e contagens por carga</text>
+
+  <path d="M269,122 V178" class="lin"/>
+  <path d="M449,122 V178" class="lin"/>
+  <path d="M629,122 V166" class="lin"/>
+  <path d="M388,226 H406" class="lin"/>
+  <path d="M558,226 H586" class="lin"/>
+
+  <!-- DAG 2 -->
+  <rect x="215" y="432" width="345" height="104" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="5 4"/>
+  <text x="228" y="452" class="s">Airflow · DAG <tspan font-weight="600" fill="#0f172a">citizentech_indicadores_reconhecimento</tspan> · diário 01:30</text>
+  <rect x="228" y="466" width="140" height="52" rx="6" fill="#fff" stroke="#334155"/>
+  <text x="298" y="488" class="t" text-anchor="middle">Simular (opcional)</text>
+  <text x="298" y="504" class="s" text-anchor="middle">origem = simulado</text>
+  <rect x="400" y="466" width="146" height="52" rx="6" fill="#fff" stroke="#334155"/>
+  <text x="473" y="488" class="t" text-anchor="middle">Calcular indicadores</text>
+  <text x="473" y="504" class="s" text-anchor="middle">últimos 7 dias</text>
+  <path d="M368,492 H398" class="lin"/>
+
+  <!-- app grava eventos; DAG2 lê e escreve -->
+  <path d="M185,470 H200 V410 H586" class="lin"/>
+  <text x="300" y="404" class="s">API grava evento_reconhecimento</text>
+  <path d="M546,480 H570 V330 H586" class="lin"/>
+
+  <!-- consumo -->
+  <rect x="800" y="62" width="180" height="70" rx="8" fill="#fdf4ff" stroke="#a21caf"/>
+  <text x="812" y="84" class="t">Visão computacional</text>
+  <text x="812" y="101" class="s">casa texto do OCR com o</text>
+  <text x="812" y="116" class="s">letreiro real (matching.py)</text>
+
+  <rect x="800" y="150" width="180" height="70" rx="8" fill="#fdf4ff" stroke="#a21caf"/>
+  <text x="812" y="172" class="t">App no celular</text>
+  <text x="812" y="189" class="s">letreiros.json (536 KB)</text>
+  <text x="812" y="204" class="s">funciona sem internet</text>
+
+  <rect x="800" y="238" width="180" height="84" rx="8" fill="#fdf4ff" stroke="#a21caf"/>
+  <text x="812" y="260" class="t">API do MVP</text>
+  <text x="812" y="277" class="s">alerta de descida (itinerário)</text>
+  <text x="812" y="292" class="s">espera estimada (frequência)</text>
+  <text x="812" y="307" class="s">linhas que param no ponto</text>
+
+  <rect x="800" y="432" width="180" height="70" rx="8" fill="#fdf4ff" stroke="#a21caf"/>
+  <text x="812" y="454" class="t">Pitch / BI</text>
+  <text x="812" y="471" class="s">taxa de acerto, alertas</text>
+  <text x="812" y="486" class="s">errados, latência p50/p95</text>
+
+  <path d="M764,96 H782 V185 H798" class="lin"/>
+  <path d="M782,96 V97 H798" class="lin"/>
+  <path d="M775,280 H798" class="lin"/>
+  <path d="M775,330 H790 V467 H798" class="lin"/>
+</svg>
+</div>
+<table>
+  <thead><tr><th style="width:22%">Camada</th><th>O que guarda</th><th style="width:34%">Por quê</th></tr></thead>
+  <tbody>
+    <tr><td><b>Raw</b><br><code>data/raw/gtfs/&lt;data&gt;_&lt;sha8&gt;/</code></td><td>Zip original do feed e um <code>_metadados.json</code> (URL, sha256, tamanho, arquivos).</td><td>Imutável: permite reprocessar e auditar sem depender da fonte continuar no ar.</td></tr>
+    <tr><td><b>Staging</b><br><code>data/staging/&lt;execucao_id&gt;/</code></td><td>Parquet tipado e normalizado de cada tabela.</td><td>Formato colunar, compacto, com tipos; é sobre ele que roda o portão de qualidade.</td></tr>
+    <tr><td><b>Curada</b><br>MySQL 8.4 <code>citizentech</code></td><td>Tabelas de referência (GTFS), eventos operacionais, indicadores e linhagem.</td><td>Contrato estável com a API do MVP; consultas por chave com índices.</td></tr>
+    <tr><td><b>Serving offline</b><br><code>data/serving/letreiros.json</code></td><td>Todos os letreiros (536 KB).</td><td>O celular compara o OCR com a linha escolhida mesmo sem internet no ponto.</td></tr>
+  </tbody>
+</table>
+
+<h3>Decisões técnicas</h3>
+<table>
+  <thead><tr><th style="width:26%">Decisão</th><th>Justificativa</th></tr></thead>
+  <tbody>
+    <tr><td>Airflow 2.10.5, LocalExecutor, Docker Compose</td><td>Atende à orquestração pedida no enunciado com o menor número de serviços (sem Celery/Redis). Os DAGs só orquestram; a lógica fica no pacote <code>pipeline/</code>, testável sem Airflow.</td></tr>
+    <tr><td>ETL em Python/pandas</td><td>Volume pequeno (≈165 mil linhas por carga, &lt;20 s): cabe em memória; Spark seria custo sem ganho. A arquitetura em camadas permite trocar o motor se o volume crescer (ex.: várias cidades).</td></tr>
+    <tr><td>Short-circuit por SHA-256</td><td>Evita recarga e versões duplicadas; registra a execução como <code>ignorada</code> em <code>carga_controle</code>.</td></tr>
+    <tr><td>Carga full-refresh transacional</td><td>O GTFS é publicado como foto completa. Apagar e inserir dentro de uma transação, com reconciliação de contagem, garante que o app nunca leia uma carga pela metade.</td></tr>
+    <tr><td>Portão de qualidade antes da carga</td><td>Falha crítica interrompe o DAG e preserva a última versão boa no banco.</td></tr>
+    <tr><td>Uma viagem de referência por linha e sentido</td><td>A SPTrans publica uma viagem por sentido e modela horários em <code>frequencies.txt</code>; o itinerário vem dessa viagem e a espera vem da frequência.</td></tr>
+    <tr><td><code>shapes.txt</code> só no raw</td><td>60 MB de traçado que o app não usa; o alerta de descida depende da sequência de paradas.</td></tr>
+  </tbody>
+</table>
+
+<h2 class="quebra">3. Fontes de dados</h2>
+<table>
+  <thead><tr><th style="width:22%">Fonte</th><th>Detalhes</th><th style="width:22%">Uso</th></tr></thead>
+  <tbody>
+    <tr><td><b>GTFS estático SPTrans</b></td><td>Publicado pela SPTrans. O download oficial exige cadastro; usamos o espelho público do <a href="https://mobilitydatabase.org">Mobility Database</a>, feed <code>mdb-8</code> (<a href="https://files.mobilitydatabase.org/mdb-8/latest.zip">latest.zip</a>), que replica cada versão publicada. Versão carregada: sha256 <code>ae07f1c3daa87eaf…</code>. Arquivos usados: routes, trips, stops, stop_times, frequencies. Codificação detectada por arquivo (UTF-8, com fallback para Windows-1252).</td><td>linha, letreiro, parada, itinerario, frequencia</td></tr>
+    <tr><td><b>Eventos do app</b></td><td>Um registro por leitura de letreiro, gravado pela API do MVP em <code>evento_reconhecimento</code>. Sem imagem, sem localização e sem identificação pessoal.</td><td>indicador_reconhecimento_diario</td></tr>
+    <tr><td><b>Eventos simulados</b> (temporário)</td><td>Gerados pelo DAG 2 quando chamado com <code>{"simular": true}</code>, sempre com <code>origem = 'simulado'</code>. Letreiros sorteados entre os reais. Premissas: acerto de 90% de dia e 70% à noite, 35% das leituras à noite, 30% dos ônibus são a linha esperada, 20% dos erros confundem com a linha esperada, 15% sem confirmação, latência lognormal com mediana de 900 ms, alerta só com confiança ≥ 0,75.</td><td>Demonstrar o DAG 2 antes dos testes de campo. <b>Não são resultados do produto.</b></td></tr>
+  </tbody>
+</table>
+
+<h2>4. DAGs</h2>
+<h3><code>citizentech_gtfs_sptrans</code> · segundas 04:00 (America/Sao_Paulo) · 2 retries de 5 min</h3>
+<table>
+  <thead><tr><th style="width:22%">Task</th><th>O que faz</th></tr></thead>
+  <tbody>
+    <tr><td><code>criar_schema</code></td><td>Cria as tabelas se não existirem (mesmo modelo de <code>sql/schema_mysql.sql</code>).</td></tr>
+    <tr><td><code>extrair</code></td><td>Baixa com 3 tentativas e espera crescente, valida o zip e os arquivos obrigatórios, calcula o SHA-256, grava no raw.</td></tr>
+    <tr><td><code>versao_nova</code></td><td>Short-circuit: se o SHA-256 for o da última carga bem-sucedida, registra <code>ignorada</code> e pula o resto.</td></tr>
+    <tr><td><code>transformar</code></td><td>Decodifica, tipa, normaliza textos (sem acento, maiúsculo), separa número e sufixo da linha, monta letreiro por sentido, calcula minutos desde o início e distância até a próxima parada (haversine), converte frequências para minutos. Grava Parquet.</td></tr>
+    <tr><td><code>checar_qualidade</code></td><td>18 checagens (seção 5). Falha crítica interrompe o DAG.</td></tr>
+    <tr><td><code>carregar</code></td><td>Uma transação: apaga e insere na ordem das FKs, reconcilia staging × banco, registra a linhagem.</td></tr>
+    <tr><td><code>publicar_pacote_offline</code></td><td>Exporta <code>letreiros.json</code> para o app.</td></tr>
+  </tbody>
+</table>
+<h3><code>citizentech_indicadores_reconhecimento</code> · diário 01:30</h3>
+<table>
+  <thead><tr><th style="width:22%">Task</th><th>O que faz</th></tr></thead>
+  <tbody>
+    <tr><td><code>simular_se_pedido</code></td><td>Só age com o parâmetro <code>simular = true</code>.</td></tr>
+    <tr><td><code>calcular</code></td><td>Recalcula os últimos 7 dias (inclui eventos que chegam atrasados de celulares sem rede): taxa de acerto, alertas para o ônibus errado, latência p50/p95 e acerto à noite, por dia e por origem.</td></tr>
+  </tbody>
+</table>
+
+<h2>5. Qualidade de dados (última execução)</h2>
+<p>18 checagens, 0 falhas críticas, 0 avisos.</p><table><thead><tr><th>Checagem</th><th>Crítica?</th><th>Resultado</th><th>Detalhe</th></tr></thead><tbody>
+<tr><td><code>volume_linha</code></td><td>sim</td><td><span class="ok">OK</span></td><td>1366 linhas (mínimo 500)</td></tr>
+<tr><td><code>volume_letreiro</code></td><td>sim</td><td><span class="ok">OK</span></td><td>2269 linhas (mínimo 500)</td></tr>
+<tr><td><code>volume_parada</code></td><td>sim</td><td><span class="ok">OK</span></td><td>22266 linhas (mínimo 5000)</td></tr>
+<tr><td><code>volume_itinerario</code></td><td>sim</td><td><span class="ok">OK</span></td><td>99031 linhas (mínimo 10000)</td></tr>
+<tr><td><code>pk_unica_linha</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 duplicadas</td></tr>
+<tr><td><code>pk_unica_letreiro</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 duplicadas</td></tr>
+<tr><td><code>pk_unica_parada</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 duplicadas</td></tr>
+<tr><td><code>pk_unica_itinerario</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 duplicadas</td></tr>
+<tr><td><code>pk_unica_frequencia</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 duplicadas</td></tr>
+<tr><td><code>fk_letreiro_route_id</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 órfãos</td></tr>
+<tr><td><code>fk_itinerario_letreiro_id</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 órfãos</td></tr>
+<tr><td><code>fk_itinerario_stop_id</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 órfãos</td></tr>
+<tr><td><code>fk_frequencia_letreiro_id</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 órfãos</td></tr>
+<tr><td><code>letreiro_texto_preenchido</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 letreiros sem texto</td></tr>
+<tr><td><code>letreiro_destino_preenchido</code></td><td>aviso</td><td><span class="ok">OK</span></td><td>0 sem destino</td></tr>
+<tr><td><code>parada_dentro_bbox</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 paradas fora da RMSP</td></tr>
+<tr><td><code>itinerario_tempo_crescente</code></td><td>aviso</td><td><span class="ok">OK</span></td><td>0 regressões</td></tr>
+<tr><td><code>letreiro_com_itinerario</code></td><td>sim</td><td><span class="ok">OK</span></td><td>0 letreiros sem itinerário</td></tr>
+</tbody></table><p>Execução: <code>gtfs_20261113T212226597037_ae07f1c3</code>.</p>
+
+<h2>6. Dicionário de dados</h2>
+<p>Gerado de <code>pipeline/schema.py</code> (a mesma definição cria as tabelas e o DDL), com exemplos reais da última carga. Todos os textos estão em UTF-8 (<code>utf8mb4</code> no MySQL). Datas e horas em UTC, exceto <code>hora_inicio</code>/<code>hora_fim</code>, que seguem o GTFS (horário local, podendo passar de 24:00).</p>
+<section class="tabela"><h3><code>linha</code> <span class="n">1.366 linhas</span></h3>
+<p>Linhas de ônibus da SPTrans (fonte: GTFS). <em>Camada: curada (DAG 1, fonte GTFS SPTrans).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>route_id</code></td><td>VARCHAR(20)</td><td>PK</td><td>não</td><td>ID GTFS da linha, ex. 8000-10</td><td class='ex'>1012-10</td></tr>
+<tr><td><code>numero</code></td><td>VARCHAR(10)</td><td></td><td>não</td><td>Parte numérica do letreiro, ex. 8000</td><td class='ex'>1012</td></tr>
+<tr><td><code>sufixo</code></td><td>VARCHAR(5)</td><td></td><td>sim</td><td>Sufixo após o hífen, ex. 10</td><td class='ex'>10</td></tr>
+<tr><td><code>nome</code></td><td>VARCHAR(160)</td><td></td><td>não</td><td>Nome longo: terminal A - terminal B</td><td class='ex'>Term. Jd. Britania - Jd. Monte Belo</td></tr>
+<tr><td><code>tipo_transporte</code></td><td>SMALLINT</td><td></td><td>não</td><td>route_type GTFS (3 = ônibus)</td><td class='ex'>3</td></tr>
+<tr><td><code>cor_hex</code></td><td>VARCHAR(6)</td><td></td><td>sim</td><td>Cor oficial da linha (RGB hex), usada na interface</td><td class='ex'>509E2F</td></tr>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Execução do pipeline que gravou a linha (FK lógica p/ carga_controle)</td><td class='ex'>gtfs_20261113T202011192633_ae07f1c3</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>letreiro</code> <span class="n">2.269 linhas</span></h3>
+<p>Texto do painel do ônibus por sentido; vocabulário do OCR. <em>Camada: curada (DAG 1, fonte GTFS SPTrans).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>letreiro_id</code></td><td>VARCHAR(30)</td><td>PK</td><td>não</td><td>route_id + &#x27;_&#x27; + sentido</td><td class='ex'>1012-10_0</td></tr>
+<tr><td><code>route_id</code></td><td>VARCHAR(20)</td><td>FK → linha.route_id</td><td>não</td><td>Linha à qual o letreiro pertence</td><td class='ex'>1012-10</td></tr>
+<tr><td><code>sentido</code></td><td>SMALLINT</td><td></td><td>não</td><td>direction_id GTFS (0 ida, 1 volta)</td><td class='ex'>0</td></tr>
+<tr><td><code>destino</code></td><td>VARCHAR(120)</td><td></td><td>não</td><td>trip_headsign, como aparece no ônibus</td><td class='ex'>Jd. Monte Belo</td></tr>
+<tr><td><code>texto_letreiro</code></td><td>VARCHAR(160)</td><td></td><td>não</td><td>numero-sufixo + destino</td><td class='ex'>1012-10 Jd. Monte Belo</td></tr>
+<tr><td><code>texto_normalizado</code></td><td>VARCHAR(160)</td><td></td><td>não</td><td>Sem acento, maiúsculo, sem pontuação</td><td class='ex'>1012 10 JD MONTE BELO</td></tr>
+<tr><td><code>trip_id_referencia</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Viagem GTFS usada como modelo do sentido</td><td class='ex'>1012-10-0</td></tr>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Execução do pipeline que gravou a linha (FK lógica p/ carga_controle)</td><td class='ex'>gtfs_20261113T202011192633_ae07f1c3</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>parada</code> <span class="n">22.266 linhas</span></h3>
+<p>Pontos de ônibus com coordenadas. <em>Camada: curada (DAG 1, fonte GTFS SPTrans).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>stop_id</code></td><td>VARCHAR(20)</td><td>PK</td><td>não</td><td>ID GTFS do ponto de ônibus</td><td class='ex'>18848</td></tr>
+<tr><td><code>nome</code></td><td>VARCHAR(160)</td><td></td><td>não</td><td>Nome do ponto, lido em voz alta no alerta de descida</td><td class='ex'>Clínicas</td></tr>
+<tr><td><code>nome_normalizado</code></td><td>VARCHAR(160)</td><td></td><td>não</td><td>Nome sem acento/pontuação, para busca por voz</td><td class='ex'>CLINICAS</td></tr>
+<tr><td><code>descricao</code></td><td>VARCHAR(255)</td><td></td><td>sim</td><td>Referência/endereço do ponto, quando a SPTrans informa</td><td class='ex'></td></tr>
+<tr><td><code>lat</code></td><td>DOUBLE</td><td></td><td>não</td><td>WGS84; DOUBLE no MySQL</td><td class='ex'>-23.554007</td></tr>
+<tr><td><code>lon</code></td><td>DOUBLE</td><td></td><td>não</td><td>WGS84; DOUBLE no MySQL</td><td class='ex'>-46.671097</td></tr>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Execução do pipeline que gravou a linha (FK lógica p/ carga_controle)</td><td class='ex'>gtfs_20261113T202011192633_ae07f1c3</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>itinerario</code> <span class="n">99.031 linhas</span></h3>
+<p>Sequência de paradas de cada letreiro; base do alerta de descida. <em>Camada: curada (DAG 1, fonte GTFS SPTrans).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>letreiro_id</code></td><td>VARCHAR(30)</td><td>PK, FK → letreiro.letreiro_id</td><td>não</td><td>Letreiro (linha+sentido)</td><td class='ex'>1012-10_0</td></tr>
+<tr><td><code>ordem</code></td><td>INTEGER</td><td>PK</td><td>não</td><td>stop_sequence GTFS</td><td class='ex'>1</td></tr>
+<tr><td><code>stop_id</code></td><td>VARCHAR(20)</td><td>FK → parada.stop_id</td><td>não</td><td>Parada nesta posição do trajeto</td><td class='ex'>301790</td></tr>
+<tr><td><code>minutos_desde_inicio</code></td><td>FLOAT</td><td></td><td>sim</td><td>Tempo previsto desde a 1a parada</td><td class='ex'>0.0</td></tr>
+<tr><td><code>distancia_proxima_m</code></td><td>FLOAT</td><td></td><td>sim</td><td>Distância em linha reta até a próxima parada</td><td class='ex'>412.4</td></tr>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Execução do pipeline que gravou a linha (FK lógica p/ carga_controle)</td><td class='ex'>gtfs_20261113T202011192633_ae07f1c3</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>frequencia</code> <span class="n">40.353 linhas</span></h3>
+<p>Intervalo entre ônibus por faixa horária. <em>Camada: curada (DAG 1, fonte GTFS SPTrans).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>letreiro_id</code></td><td>VARCHAR(30)</td><td>PK, FK → letreiro.letreiro_id</td><td>não</td><td>Letreiro (linha+sentido)</td><td class='ex'>1012-10_0</td></tr>
+<tr><td><code>hora_inicio</code></td><td>VARCHAR(8)</td><td>PK</td><td>não</td><td>HH:MM:SS (pode passar de 24h no GTFS)</td><td class='ex'>00:00:00</td></tr>
+<tr><td><code>hora_fim</code></td><td>VARCHAR(8)</td><td></td><td>não</td><td>Fim da faixa horária (HH:MM:SS)</td><td class='ex'>00:59:00</td></tr>
+<tr><td><code>intervalo_min</code></td><td>FLOAT</td><td></td><td>não</td><td>Intervalo previsto entre ônibus, em minutos (headway_secs/60)</td><td class='ex'>20.0</td></tr>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Execução do pipeline que gravou a linha (FK lógica p/ carga_controle)</td><td class='ex'>gtfs_20261113T202011192633_ae07f1c3</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>evento_reconhecimento</code> <span class="n">500 linhas</span></h3>
+<p>Uma leitura de letreiro feita pelo app (sem imagem e sem dado pessoal). <em>Camada: operacional (escrita pelo MVP).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>evento_id</code></td><td>VARCHAR(36)</td><td>PK</td><td>não</td><td>UUID gerado pelo app</td><td class='ex'>6c031199-972a-8469-1641-9f828b9d2434</td></tr>
+<tr><td><code>ocorrido_em</code></td><td>DATETIME</td><td></td><td>não</td><td>UTC</td><td class='ex'>2026-11-13 14:08:00.000000</td></tr>
+<tr><td><code>sessao_hash</code></td><td>VARCHAR(64)</td><td></td><td>não</td><td>SHA-256 de ID de sessão efêmero; sem dado pessoal</td><td class='ex'>3699fb66f87412213ff87c3a56d0d4852f326a4eb1740b43ec61e85e696f</td></tr>
+<tr><td><code>letreiro_alvo</code></td><td>VARCHAR(30)</td><td></td><td>não</td><td>Letreiro escolhido pelo usuário</td><td class='ex'>2772-10_0</td></tr>
+<tr><td><code>texto_ocr</code></td><td>VARCHAR(160)</td><td></td><td>sim</td><td>Texto lido pela visão computacional</td><td class='ex'>2772-10 METRÔ PENHA</td></tr>
+<tr><td><code>letreiro_reconhecido</code></td><td>VARCHAR(30)</td><td></td><td>sim</td><td>Melhor casamento OCR x tabela letreiro</td><td class='ex'>2772-10_0</td></tr>
+<tr><td><code>confianca</code></td><td>FLOAT</td><td></td><td>sim</td><td>0..1</td><td class='ex'>0.935</td></tr>
+<tr><td><code>latencia_ms</code></td><td>INTEGER</td><td></td><td>sim</td><td>Captura -&gt; alerta</td><td class='ex'>902</td></tr>
+<tr><td><code>alerta_emitido</code></td><td>BOOL</td><td></td><td>não</td><td>O app avisou &#x27;é o seu ônibus&#x27;?</td><td class='ex'>1</td></tr>
+<tr><td><code>resultado</code></td><td>VARCHAR(15)</td><td></td><td>não</td><td>acerto | erro | nao_confirmado</td><td class='ex'>acerto</td></tr>
+<tr><td><code>condicao_luz</code></td><td>VARCHAR(10)</td><td></td><td>sim</td><td>dia | noite | nao_informado</td><td class='ex'>noite</td></tr>
+<tr><td><code>origem</code></td><td>VARCHAR(15)</td><td></td><td>não</td><td>teste_campo | producao | simulado</td><td class='ex'>simulado</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>indicador_reconhecimento_diario</code> <span class="n">9 linhas</span></h3>
+<p>Indicadores de impacto por dia e origem (DAG 2). <em>Camada: curada (DAG 2).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>dia</code></td><td>VARCHAR(10)</td><td>PK</td><td>não</td><td>AAAA-MM-DD</td><td class='ex'>2026-11-05</td></tr>
+<tr><td><code>origem</code></td><td>VARCHAR(15)</td><td>PK</td><td>não</td><td>teste_campo | producao | simulado</td><td class='ex'>simulado</td></tr>
+<tr><td><code>total_eventos</code></td><td>INTEGER</td><td></td><td>não</td><td>Leituras de letreiro no dia</td><td class='ex'>53</td></tr>
+<tr><td><code>eventos_confirmados</code></td><td>INTEGER</td><td></td><td>não</td><td>Leituras com resultado confirmado (acerto/erro)</td><td class='ex'>43</td></tr>
+<tr><td><code>taxa_acerto</code></td><td>FLOAT</td><td></td><td>sim</td><td>acertos / confirmados</td><td class='ex'>0.814</td></tr>
+<tr><td><code>alertas_errados</code></td><td>INTEGER</td><td></td><td>não</td><td>alerta para o ônibus errado (erro crítico)</td><td class='ex'>1</td></tr>
+<tr><td><code>latencia_p50_ms</code></td><td>FLOAT</td><td></td><td>sim</td><td>Mediana do tempo captura-&gt;alerta</td><td class='ex'>885.0</td></tr>
+<tr><td><code>latencia_p95_ms</code></td><td>FLOAT</td><td></td><td>sim</td><td>Percentil 95 do tempo captura-&gt;alerta</td><td class='ex'>1668.7999999999997</td></tr>
+<tr><td><code>taxa_acerto_noite</code></td><td>FLOAT</td><td></td><td>sim</td><td>Taxa de acerto só com condicao_luz = noite</td><td class='ex'>0.7647</td></tr>
+<tr><td><code>calculado_em</code></td><td>DATETIME</td><td></td><td>não</td><td>Quando o DAG 2 calculou (UTC)</td><td class='ex'>2026-11-12 01:37:10.181320</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>carga_controle</code> <span class="n">4 linhas</span></h3>
+<p>Linhagem: cada execução do DAG 1, versão do feed e resultado. <em>Camada: controle / linhagem.</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td>PK</td><td>não</td><td>gtfs_&lt;timestamp UTC&gt;_&lt;sha8&gt;</td><td class='ex'>gtfs_20261112T013707487421_457293b8</td></tr>
+<tr><td><code>fonte</code></td><td>VARCHAR(120)</td><td></td><td>não</td><td>Nome da fonte de dados</td><td class='ex'>SPTrans GTFS (Mobility Database mdb-8)</td></tr>
+<tr><td><code>url</code></td><td>VARCHAR(255)</td><td></td><td>não</td><td>De onde o arquivo foi baixado</td><td class='ex'>https://files.mobilitydatabase.org/mdb-8/latest.zip</td></tr>
+<tr><td><code>sha256_arquivo</code></td><td>VARCHAR(64)</td><td></td><td>não</td><td>Hash do zip: identifica a versão do feed</td><td class='ex'>457293b83e34e95e2f8d246dd22f9934525c5941d863d5f26b933cd9238f</td></tr>
+<tr><td><code>iniciada_em</code></td><td>DATETIME</td><td></td><td>não</td><td>UTC</td><td class='ex'>2026-11-12 01:37:08.600798</td></tr>
+<tr><td><code>finalizada_em</code></td><td>DATETIME</td><td></td><td>sim</td><td>UTC</td><td class='ex'>2026-11-12 01:37:10.083106</td></tr>
+<tr><td><code>status</code></td><td>VARCHAR(15)</td><td></td><td>não</td><td>sucesso | falha | ignorada</td><td class='ex'>sucesso</td></tr>
+<tr><td><code>linhas_carregadas</code></td><td>TEXT</td><td></td><td>sim</td><td>JSON {tabela: qtd}</td><td class='ex'>{&quot;linha&quot;: 1365, &quot;parada&quot;: 22270, &quot;letreiro&quot;: 2268, &quot;itinerar</td></tr>
+<tr><td><code>observacao</code></td><td>TEXT</td><td></td><td>sim</td><td>Resumo da qualidade ou mensagem de erro</td><td class='ex'>{&quot;qualidade&quot;: {&quot;total&quot;: 18, &quot;falhas&quot;: 0, &quot;avisos&quot;: 0}}</td></tr>
+</tbody></table></section>
+
+<h2 class="quebra">7. Evidências de execução</h2>
+<h3>7.1 Execução completa (log)</h3>
+<pre>2026-11-11 22:37:04,750 INFO pipeline.extract: Baixando https://files.mobilitydatabase.org/mdb-8/latest.zip
+2026-11-11 22:37:07,497 INFO pipeline.extract: Raw salvo em data/raw/gtfs/20261112_457293b8/feed.zip (14313809 bytes, sha256 457293b83e34)
+2026-11-11 22:37:07,514 INFO pipeline.transform: routes.txt: 1365 linhas (utf-8)
+2026-11-11 22:37:07,521 INFO pipeline.transform: trips.txt: 2268 linhas (utf-8)
+2026-11-11 22:37:07,597 INFO pipeline.transform: stops.txt: 22270 linhas (utf-8)
+2026-11-11 22:37:07,721 INFO pipeline.transform: stop_times.txt: 99071 linhas (utf-8)
+2026-11-11 22:37:07,755 INFO pipeline.transform: frequencies.txt: 40337 linhas (utf-8)
+2026-11-11 22:37:08,345 INFO pipeline.transform: staging/linha: 1365 linhas
+2026-11-11 22:37:08,352 INFO pipeline.transform: staging/letreiro: 2268 linhas
+2026-11-11 22:37:08,381 INFO pipeline.transform: staging/parada: 22270 linhas
+2026-11-11 22:37:08,432 INFO pipeline.transform: staging/itinerario: 99071 linhas
+2026-11-11 22:37:08,458 INFO pipeline.transform: staging/frequencia: 40337 linhas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] volume_linha: 1365 linhas (mínimo 500)
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] volume_letreiro: 2268 linhas (mínimo 500)
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] volume_parada: 22270 linhas (mínimo 5000)
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] volume_itinerario: 99071 linhas (mínimo 10000)
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] pk_unica_linha: 0 duplicadas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] pk_unica_letreiro: 0 duplicadas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] pk_unica_parada: 0 duplicadas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] pk_unica_itinerario: 0 duplicadas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] pk_unica_frequencia: 0 duplicadas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] fk_letreiro_route_id: 0 órfãos
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] fk_itinerario_letreiro_id: 0 órfãos
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] fk_itinerario_stop_id: 0 órfãos
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] fk_frequencia_letreiro_id: 0 órfãos
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] letreiro_texto_preenchido: 0 letreiros sem texto
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] letreiro_destino_preenchido: 0 sem destino
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] parada_dentro_bbox: 0 paradas fora da RMSP
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] itinerario_tempo_crescente: 0 regressões
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] letreiro_com_itinerario: 0 letreiros sem itinerário
+2026-11-11 22:37:08,661 INFO pipeline.load: curated/linha: 1365 linhas carregadas
+2026-11-11 22:37:08,867 INFO pipeline.load: curated/parada: 22270 linhas carregadas
+2026-11-11 22:37:08,894 INFO pipeline.load: curated/letreiro: 2268 linhas carregadas
+2026-11-11 22:37:09,800 INFO pipeline.load: curated/itinerario: 99071 linhas carregadas
+2026-11-11 22:37:10,083 INFO pipeline.load: curated/frequencia: 40337 linhas carregadas
+2026-11-11 22:37:10,147 INFO pipeline.serve: Pacote offline: 2268 letreiros, 536 KB em data/serving/letreiros.json
+2026-11-11 22:37:10,171 INFO pipeline.simulacao: 500 eventos simulados gravados (semente 42)
+2026-11-11 22:37:10,204 INFO pipeline.metrics: Indicadores recalculados para 8 dia(s)/origem(ns)
+{
+  &quot;gtfs&quot;: {
+    &quot;status&quot;: &quot;sucesso&quot;,
+    &quot;execucao_id&quot;: &quot;gtfs_20261112T013707487421_457293b8&quot;,
+    &quot;linhas&quot;: {
+      &quot;linha&quot;: 1365,
+      &quot;parada&quot;: 22270,
+      &quot;letreiro&quot;: 2268,
+      &quot;itinerario&quot;: 99071,
+      &quot;frequencia&quot;: 40337
+    },
+    &quot;qualidade&quot;: {
+      &quot;total&quot;: 18,
+      &quot;falhas&quot;: 0,
+      &quot;avisos&quot;: 0
+    },
+    &quot;pacote_offline&quot;: &quot;data/serving/letreiros.json&quot;
+  },
+  &quot;simulados&quot;: 500,
+  &quot;indicadores&quot;: 8
+}</pre>
+<h3>7.2 Segunda execução com o mesmo feed: carga ignorada</h3>
+<pre>2026-11-11 22:37:11,304 INFO pipeline.extract: Baixando https://files.mobilitydatabase.org/mdb-8/latest.zip
+2026-11-11 22:37:14,119 INFO pipeline.extract: Raw salvo em data/raw/gtfs/20261112_457293b8/feed.zip (14313809 bytes, sha256 457293b83e34)
+2026-11-11 22:37:14,130 INFO root: Versão 457293b83e34 já está no banco; carga ignorada.
+{
+  &quot;gtfs&quot;: {
+    &quot;status&quot;: &quot;ignorada&quot;,
+    &quot;execucao_id&quot;: &quot;gtfs_20261112T013714108855_457293b8&quot;
+  }
+}</pre>
+<h3>7.3 Dados carregados, consultados como o MVP consulta</h3>
+<h4>Linhagem (carga_controle)</h4><pre class='sql'>SELECT execucao_id, status, sha256_arquivo, linhas_carregadas FROM carga_controle ORDER BY iniciada_em</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>execucao_id</th>
+      <th>status</th>
+      <th>sha256_arquivo</th>
+      <th>linhas_carregadas</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>gtfs_20261112T013707487421_457293b8</td>
+      <td>sucesso</td>
+      <td>457293b83e34e95e2f8d246dd22f9934525c5941d863d5f26b933cd9238f4166</td>
+      <td>{"linha": 1365, "parada": 22270, "letreiro": 2268, "itinerario": 99071, "frequencia": 40337}</td>
+    </tr>
+    <tr>
+      <td>gtfs_20261112T013714108855_457293b8</td>
+      <td>ignorada</td>
+      <td>457293b83e34e95e2f8d246dd22f9934525c5941d863d5f26b933cd9238f4166</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td>gtfs_20261113T202011192633_ae07f1c3</td>
+      <td>sucesso</td>
+      <td>ae07f1c3daa87eafc11cca8729c34eecdb9d82ecaabb2d7888ed46dc1c8794cc</td>
+      <td>{"linha": 1366, "parada": 22266, "letreiro": 2269, "itinerario": 99031, "frequencia": 40353}</td>
+    </tr>
+    <tr>
+      <td>gtfs_20261113T232324906301_ae07f1c3</td>
+      <td>ignorada</td>
+      <td>ae07f1c3daa87eafc11cca8729c34eecdb9d82ecaabb2d7888ed46dc1c8794cc</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Letreiros da linha 8000-10 (o que o OCR precisa reconhecer)</h4><pre class='sql'>SELECT letreiro_id, texto_letreiro, texto_normalizado FROM letreiro WHERE route_id = &#x27;8000-10&#x27;</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>letreiro_id</th>
+      <th>texto_letreiro</th>
+      <th>texto_normalizado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>8000-10_0</td>
+      <td>8000-10 Pça. Ramos De Azevedo</td>
+      <td>8000 10 PCA RAMOS DE AZEVEDO</td>
+    </tr>
+    <tr>
+      <td>8000-10_1</td>
+      <td>8000-10 Term. Lapa</td>
+      <td>8000 10 TERM LAPA</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Alerta de descida: primeiras paradas do 8000-10 sentido 0, com nome e tempo previsto</h4><pre class='sql'>SELECT i.ordem, p.nome, ROUND(i.minutos_desde_inicio, 1) AS min, i.distancia_proxima_m FROM itinerario i JOIN parada p ON p.stop_id = i.stop_id WHERE i.letreiro_id = &#x27;8000-10_0&#x27; ORDER BY i.ordem LIMIT 6</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>ordem</th>
+      <th>nome</th>
+      <th>min</th>
+      <th>distancia_proxima_m</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>Terminal Lapa - Plat. 1</td>
+      <td>0.0</td>
+      <td>343.5</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Catao B/C</td>
+      <td>2.9</td>
+      <td>232.2</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Scipiao B/C</td>
+      <td>5.9</td>
+      <td>377.1</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>Vespasiano B/C</td>
+      <td>8.8</td>
+      <td>532.5</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>Cornelia</td>
+      <td>11.7</td>
+      <td>679.8</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>Sesc Pompeia B/C</td>
+      <td>14.7</td>
+      <td>429.5</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Espera estimada sem tempo real: intervalo do 8000-10 sentido 0 por faixa</h4><pre class='sql'>SELECT hora_inicio, hora_fim, intervalo_min FROM frequencia WHERE letreiro_id = &#x27;8000-10_0&#x27; ORDER BY hora_inicio LIMIT 6</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>hora_inicio</th>
+      <th>hora_fim</th>
+      <th>intervalo_min</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>04:00:00</td>
+      <td>04:59:00</td>
+      <td>60.0</td>
+    </tr>
+    <tr>
+      <td>05:00:00</td>
+      <td>05:59:00</td>
+      <td>12.0</td>
+    </tr>
+    <tr>
+      <td>06:00:00</td>
+      <td>06:59:00</td>
+      <td>8.0</td>
+    </tr>
+    <tr>
+      <td>07:00:00</td>
+      <td>07:59:00</td>
+      <td>7.0</td>
+    </tr>
+    <tr>
+      <td>08:00:00</td>
+      <td>08:59:00</td>
+      <td>10.0</td>
+    </tr>
+    <tr>
+      <td>09:00:00</td>
+      <td>09:59:00</td>
+      <td>30.0</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Linhas que passam numa parada (ex.: a 1a parada do 8000-10)</h4><pre class='sql'>SELECT l.texto_letreiro FROM itinerario i JOIN letreiro l ON l.letreiro_id = i.letreiro_id WHERE i.stop_id = (SELECT stop_id FROM itinerario WHERE letreiro_id = &#x27;8000-10_0&#x27; AND ordem = 1) ORDER BY 1 LIMIT 8</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>texto_letreiro</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>8000-1 Pça. Ramos De Azevedo</td>
+    </tr>
+    <tr>
+      <td>8000-10 Pça. Ramos De Azevedo</td>
+    </tr>
+    <tr>
+      <td>N102-11 Term. Lapa</td>
+    </tr>
+    <tr>
+      <td>N102-11 Term. Pq. D. Pedro Ii</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Indicadores diários (origem = simulado: NÃO são resultados medidos)</h4><pre class='sql'>SELECT dia, origem, total_eventos, taxa_acerto, alertas_errados, latencia_p50_ms, taxa_acerto_noite FROM indicador_reconhecimento_diario ORDER BY dia</pre><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>dia</th>
+      <th>origem</th>
+      <th>total_eventos</th>
+      <th>taxa_acerto</th>
+      <th>alertas_errados</th>
+      <th>latencia_p50_ms</th>
+      <th>taxa_acerto_noite</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-11-05</td>
+      <td>simulado</td>
+      <td>53</td>
+      <td>0.8140</td>
+      <td>1</td>
+      <td>885.0</td>
+      <td>0.7647</td>
+    </tr>
+    <tr>
+      <td>2026-11-06</td>
+      <td>simulado</td>
+      <td>8</td>
+      <td>1.0000</td>
+      <td>0</td>
+      <td>989.0</td>
+      <td>1.0000</td>
+    </tr>
+    <tr>
+      <td>2026-11-07</td>
+      <td>simulado</td>
+      <td>60</td>
+      <td>0.8200</td>
+      <td>1</td>
+      <td>900.0</td>
+      <td>0.7619</td>
+    </tr>
+    <tr>
+      <td>2026-11-08</td>
+      <td>simulado</td>
+      <td>74</td>
+      <td>0.7869</td>
+      <td>1</td>
+      <td>944.5</td>
+      <td>0.6957</td>
+    </tr>
+    <tr>
+      <td>2026-11-09</td>
+      <td>simulado</td>
+      <td>72</td>
+      <td>0.8276</td>
+      <td>0</td>
+      <td>869.5</td>
+      <td>0.7000</td>
+    </tr>
+    <tr>
+      <td>2026-11-10</td>
+      <td>simulado</td>
+      <td>79</td>
+      <td>0.8873</td>
+      <td>0</td>
+      <td>916.0</td>
+      <td>0.7619</td>
+    </tr>
+    <tr>
+      <td>2026-11-11</td>
+      <td>simulado</td>
+      <td>77</td>
+      <td>0.8182</td>
+      <td>0</td>
+      <td>880.0</td>
+      <td>0.7727</td>
+    </tr>
+    <tr>
+      <td>2026-11-12</td>
+      <td>simulado</td>
+      <td>75</td>
+      <td>0.8730</td>
+      <td>0</td>
+      <td>896.0</td>
+      <td>0.7500</td>
+    </tr>
+    <tr>
+      <td>2026-11-13</td>
+      <td>simulado</td>
+      <td>63</td>
+      <td>0.8491</td>
+      <td>1</td>
+      <td>902.0</td>
+      <td>0.7059</td>
+    </tr>
+  </tbody>
+</table>
+<h4>Contrato com a visão computacional: texto do OCR → letreiro real</h4><table class="dataframe res">
+  <thead>
+    <tr style="text-align: right;">
+      <th>texto lido pelo OCR (com ruído)</th>
+      <th>letreiro casado</th>
+      <th>score</th>
+      <th>ambíguo?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>8OOO-1O TERM. LAPA</td>
+      <td>8000-10_1</td>
+      <td>0.906</td>
+      <td>não</td>
+    </tr>
+    <tr>
+      <td>1O6A-1O METRO SANTANA</td>
+      <td>106A-10_1</td>
+      <td>0.962</td>
+      <td>não</td>
+    </tr>
+    <tr>
+      <td>107T-10 TERM PINHEIROS</td>
+      <td>107T-10_0</td>
+      <td>1.000</td>
+      <td>não</td>
+    </tr>
+    <tr>
+      <td>PCA RAMOS DE AZEVEDO</td>
+      <td>8000-1_0</td>
+      <td>0.851</td>
+      <td>sim, empata com 8700-1_0: app não alerta</td>
+    </tr>
+  </tbody>
+</table>
+<div class="nota">Os indicadores acima vêm de eventos <b>simulados</b> e servem só para mostrar o DAG 2 funcionando. No pitch, citar apenas números com origem <code>teste_campo</code>, depois que os testes com usuários forem feitos.</div>
+<h3>7.4 Airflow</h3>
+<p><span class="preencher">[Inserir aqui os prints do Airflow: grid dos dois DAGs com as tasks em verde, log da task <code>carregar</code> e o gráfico do DAG. Também valem o link da execução do GitHub Actions (artefato <code>evidencias-pipeline</code>) ou o vídeo curto.]</span></p>
+
+<h2>8. Segurança, LGPD e limitações</h2>
+<ul>
+  <li><b>Credenciais</b> fora do código: <code>.env</code> (no <code>.gitignore</code>) e GitHub Secrets. MySQL exposto só em <code>127.0.0.1</code>.</li>
+  <li><b>Dados pessoais:</b> o pipeline não recebe nenhum. <code>evento_reconhecimento</code> não tem imagem, coordenada, nome ou telefone; a sessão é um hash SHA-256 de um ID efêmero gerado no aparelho. As imagens são processadas no celular e descartadas.</li>
+  <li><b>IA responsável:</b> o casamento OCR → letreiro marca <code>ambiguo</code> quando dois letreiros empatam (caso real: <code>8000-1</code> e <code>8000-10</code> vão para o mesmo destino). Nesse caso o app não confirma o ônibus.</li>
+  <li><b>Sem tempo real:</b> a espera é estimada pela frequência planejada. Integrar a API Olho Vivo (posição dos ônibus) é o próximo passo.</li>
+  <li><b>Distância</b> entre paradas é em linha reta: serve para antecipar o alerta de descida, não para navegação.</li>
+</ul>
+
+</body>
+</html>

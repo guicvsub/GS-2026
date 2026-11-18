@@ -1,0 +1,59 @@
+2026-11-11 22:37:04,750 INFO pipeline.extract: Baixando https://files.mobilitydatabase.org/mdb-8/latest.zip
+2026-11-11 22:37:07,497 INFO pipeline.extract: Raw salvo em data/raw/gtfs/20261112_457293b8/feed.zip (14313809 bytes, sha256 457293b83e34)
+2026-11-11 22:37:07,514 INFO pipeline.transform: routes.txt: 1365 linhas (utf-8)
+2026-11-11 22:37:07,521 INFO pipeline.transform: trips.txt: 2268 linhas (utf-8)
+2026-11-11 22:37:07,597 INFO pipeline.transform: stops.txt: 22270 linhas (utf-8)
+2026-11-11 22:37:07,721 INFO pipeline.transform: stop_times.txt: 99071 linhas (utf-8)
+2026-11-11 22:37:07,755 INFO pipeline.transform: frequencies.txt: 40337 linhas (utf-8)
+2026-11-11 22:37:08,345 INFO pipeline.transform: staging/linha: 1365 linhas
+2026-11-11 22:37:08,352 INFO pipeline.transform: staging/letreiro: 2268 linhas
+2026-11-11 22:37:08,381 INFO pipeline.transform: staging/parada: 22270 linhas
+2026-11-11 22:37:08,432 INFO pipeline.transform: staging/itinerario: 99071 linhas
+2026-11-11 22:37:08,458 INFO pipeline.transform: staging/frequencia: 40337 linhas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] volume_linha: 1365 linhas (mínimo 500)
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] volume_letreiro: 2268 linhas (mínimo 500)
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] volume_parada: 22270 linhas (mínimo 5000)
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] volume_itinerario: 99071 linhas (mínimo 10000)
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] pk_unica_linha: 0 duplicadas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] pk_unica_letreiro: 0 duplicadas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] pk_unica_parada: 0 duplicadas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] pk_unica_itinerario: 0 duplicadas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] pk_unica_frequencia: 0 duplicadas
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] fk_letreiro_route_id: 0 órfãos
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] fk_itinerario_letreiro_id: 0 órfãos
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] fk_itinerario_stop_id: 0 órfãos
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] fk_frequencia_letreiro_id: 0 órfãos
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] letreiro_texto_preenchido: 0 letreiros sem texto
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] letreiro_destino_preenchido: 0 sem destino
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] parada_dentro_bbox: 0 paradas fora da RMSP
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] itinerario_tempo_crescente: 0 regressões
+2026-11-11 22:37:08,596 INFO pipeline.quality: [OK] letreiro_com_itinerario: 0 letreiros sem itinerário
+2026-11-11 22:37:08,661 INFO pipeline.load: curated/linha: 1365 linhas carregadas
+2026-11-11 22:37:08,867 INFO pipeline.load: curated/parada: 22270 linhas carregadas
+2026-11-11 22:37:08,894 INFO pipeline.load: curated/letreiro: 2268 linhas carregadas
+2026-11-11 22:37:09,800 INFO pipeline.load: curated/itinerario: 99071 linhas carregadas
+2026-11-11 22:37:10,083 INFO pipeline.load: curated/frequencia: 40337 linhas carregadas
+2026-11-11 22:37:10,147 INFO pipeline.serve: Pacote offline: 2268 letreiros, 536 KB em data/serving/letreiros.json
+2026-11-11 22:37:10,171 INFO pipeline.simulacao: 500 eventos simulados gravados (semente 42)
+2026-11-11 22:37:10,204 INFO pipeline.metrics: Indicadores recalculados para 8 dia(s)/origem(ns)
+{
+  "gtfs": {
+    "status": "sucesso",
+    "execucao_id": "gtfs_20261112T013707487421_457293b8",
+    "linhas": {
+      "linha": 1365,
+      "parada": 22270,
+      "letreiro": 2268,
+      "itinerario": 99071,
+      "frequencia": 40337
+    },
+    "qualidade": {
+      "total": 18,
+      "falhas": 0,
+      "avisos": 0
+    },
+    "pacote_offline": "data/serving/letreiros.json"
+  },
+  "simulados": 500,
+  "indicadores": 8
+}

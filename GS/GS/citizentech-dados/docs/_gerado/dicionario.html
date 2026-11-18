@@ -1,0 +1,96 @@
+<section class="tabela"><h3><code>linha</code> <span class="n">1.366 linhas</span></h3>
+<p>Linhas de ônibus da SPTrans (fonte: GTFS). <em>Camada: curada (DAG 1, fonte GTFS SPTrans).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>route_id</code></td><td>VARCHAR(20)</td><td>PK</td><td>não</td><td>ID GTFS da linha, ex. 8000-10</td><td class='ex'>1012-10</td></tr>
+<tr><td><code>numero</code></td><td>VARCHAR(10)</td><td></td><td>não</td><td>Parte numérica do letreiro, ex. 8000</td><td class='ex'>1012</td></tr>
+<tr><td><code>sufixo</code></td><td>VARCHAR(5)</td><td></td><td>sim</td><td>Sufixo após o hífen, ex. 10</td><td class='ex'>10</td></tr>
+<tr><td><code>nome</code></td><td>VARCHAR(160)</td><td></td><td>não</td><td>Nome longo: terminal A - terminal B</td><td class='ex'>Term. Jd. Britania - Jd. Monte Belo</td></tr>
+<tr><td><code>tipo_transporte</code></td><td>SMALLINT</td><td></td><td>não</td><td>route_type GTFS (3 = ônibus)</td><td class='ex'>3</td></tr>
+<tr><td><code>cor_hex</code></td><td>VARCHAR(6)</td><td></td><td>sim</td><td>Cor oficial da linha (RGB hex), usada na interface</td><td class='ex'>509E2F</td></tr>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Execução do pipeline que gravou a linha (FK lógica p/ carga_controle)</td><td class='ex'>gtfs_20261113T202011192633_ae07f1c3</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>letreiro</code> <span class="n">2.269 linhas</span></h3>
+<p>Texto do painel do ônibus por sentido; vocabulário do OCR. <em>Camada: curada (DAG 1, fonte GTFS SPTrans).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>letreiro_id</code></td><td>VARCHAR(30)</td><td>PK</td><td>não</td><td>route_id + &#x27;_&#x27; + sentido</td><td class='ex'>1012-10_0</td></tr>
+<tr><td><code>route_id</code></td><td>VARCHAR(20)</td><td>FK → linha.route_id</td><td>não</td><td>Linha à qual o letreiro pertence</td><td class='ex'>1012-10</td></tr>
+<tr><td><code>sentido</code></td><td>SMALLINT</td><td></td><td>não</td><td>direction_id GTFS (0 ida, 1 volta)</td><td class='ex'>0</td></tr>
+<tr><td><code>destino</code></td><td>VARCHAR(120)</td><td></td><td>não</td><td>trip_headsign, como aparece no ônibus</td><td class='ex'>Jd. Monte Belo</td></tr>
+<tr><td><code>texto_letreiro</code></td><td>VARCHAR(160)</td><td></td><td>não</td><td>numero-sufixo + destino</td><td class='ex'>1012-10 Jd. Monte Belo</td></tr>
+<tr><td><code>texto_normalizado</code></td><td>VARCHAR(160)</td><td></td><td>não</td><td>Sem acento, maiúsculo, sem pontuação</td><td class='ex'>1012 10 JD MONTE BELO</td></tr>
+<tr><td><code>trip_id_referencia</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Viagem GTFS usada como modelo do sentido</td><td class='ex'>1012-10-0</td></tr>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Execução do pipeline que gravou a linha (FK lógica p/ carga_controle)</td><td class='ex'>gtfs_20261113T202011192633_ae07f1c3</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>parada</code> <span class="n">22.266 linhas</span></h3>
+<p>Pontos de ônibus com coordenadas. <em>Camada: curada (DAG 1, fonte GTFS SPTrans).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>stop_id</code></td><td>VARCHAR(20)</td><td>PK</td><td>não</td><td>ID GTFS do ponto de ônibus</td><td class='ex'>18848</td></tr>
+<tr><td><code>nome</code></td><td>VARCHAR(160)</td><td></td><td>não</td><td>Nome do ponto, lido em voz alta no alerta de descida</td><td class='ex'>Clínicas</td></tr>
+<tr><td><code>nome_normalizado</code></td><td>VARCHAR(160)</td><td></td><td>não</td><td>Nome sem acento/pontuação, para busca por voz</td><td class='ex'>CLINICAS</td></tr>
+<tr><td><code>descricao</code></td><td>VARCHAR(255)</td><td></td><td>sim</td><td>Referência/endereço do ponto, quando a SPTrans informa</td><td class='ex'></td></tr>
+<tr><td><code>lat</code></td><td>DOUBLE</td><td></td><td>não</td><td>WGS84; DOUBLE no MySQL</td><td class='ex'>-23.554007</td></tr>
+<tr><td><code>lon</code></td><td>DOUBLE</td><td></td><td>não</td><td>WGS84; DOUBLE no MySQL</td><td class='ex'>-46.671097</td></tr>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Execução do pipeline que gravou a linha (FK lógica p/ carga_controle)</td><td class='ex'>gtfs_20261113T202011192633_ae07f1c3</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>itinerario</code> <span class="n">99.031 linhas</span></h3>
+<p>Sequência de paradas de cada letreiro; base do alerta de descida. <em>Camada: curada (DAG 1, fonte GTFS SPTrans).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>letreiro_id</code></td><td>VARCHAR(30)</td><td>PK, FK → letreiro.letreiro_id</td><td>não</td><td>Letreiro (linha+sentido)</td><td class='ex'>1012-10_0</td></tr>
+<tr><td><code>ordem</code></td><td>INTEGER</td><td>PK</td><td>não</td><td>stop_sequence GTFS</td><td class='ex'>1</td></tr>
+<tr><td><code>stop_id</code></td><td>VARCHAR(20)</td><td>FK → parada.stop_id</td><td>não</td><td>Parada nesta posição do trajeto</td><td class='ex'>301790</td></tr>
+<tr><td><code>minutos_desde_inicio</code></td><td>FLOAT</td><td></td><td>sim</td><td>Tempo previsto desde a 1a parada</td><td class='ex'>0.0</td></tr>
+<tr><td><code>distancia_proxima_m</code></td><td>FLOAT</td><td></td><td>sim</td><td>Distância em linha reta até a próxima parada</td><td class='ex'>412.4</td></tr>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Execução do pipeline que gravou a linha (FK lógica p/ carga_controle)</td><td class='ex'>gtfs_20261113T202011192633_ae07f1c3</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>frequencia</code> <span class="n">40.353 linhas</span></h3>
+<p>Intervalo entre ônibus por faixa horária. <em>Camada: curada (DAG 1, fonte GTFS SPTrans).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>letreiro_id</code></td><td>VARCHAR(30)</td><td>PK, FK → letreiro.letreiro_id</td><td>não</td><td>Letreiro (linha+sentido)</td><td class='ex'>1012-10_0</td></tr>
+<tr><td><code>hora_inicio</code></td><td>VARCHAR(8)</td><td>PK</td><td>não</td><td>HH:MM:SS (pode passar de 24h no GTFS)</td><td class='ex'>00:00:00</td></tr>
+<tr><td><code>hora_fim</code></td><td>VARCHAR(8)</td><td></td><td>não</td><td>Fim da faixa horária (HH:MM:SS)</td><td class='ex'>00:59:00</td></tr>
+<tr><td><code>intervalo_min</code></td><td>FLOAT</td><td></td><td>não</td><td>Intervalo previsto entre ônibus, em minutos (headway_secs/60)</td><td class='ex'>20.0</td></tr>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td></td><td>não</td><td>Execução do pipeline que gravou a linha (FK lógica p/ carga_controle)</td><td class='ex'>gtfs_20261113T202011192633_ae07f1c3</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>evento_reconhecimento</code> <span class="n">500 linhas</span></h3>
+<p>Uma leitura de letreiro feita pelo app (sem imagem e sem dado pessoal). <em>Camada: operacional (escrita pelo MVP).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>evento_id</code></td><td>VARCHAR(36)</td><td>PK</td><td>não</td><td>UUID gerado pelo app</td><td class='ex'>6c031199-972a-8469-1641-9f828b9d2434</td></tr>
+<tr><td><code>ocorrido_em</code></td><td>DATETIME</td><td></td><td>não</td><td>UTC</td><td class='ex'>2026-11-13 14:08:00.000000</td></tr>
+<tr><td><code>sessao_hash</code></td><td>VARCHAR(64)</td><td></td><td>não</td><td>SHA-256 de ID de sessão efêmero; sem dado pessoal</td><td class='ex'>3699fb66f87412213ff87c3a56d0d4852f326a4eb1740b43ec61e85e696f</td></tr>
+<tr><td><code>letreiro_alvo</code></td><td>VARCHAR(30)</td><td></td><td>não</td><td>Letreiro escolhido pelo usuário</td><td class='ex'>2772-10_0</td></tr>
+<tr><td><code>texto_ocr</code></td><td>VARCHAR(160)</td><td></td><td>sim</td><td>Texto lido pela visão computacional</td><td class='ex'>2772-10 METRÔ PENHA</td></tr>
+<tr><td><code>letreiro_reconhecido</code></td><td>VARCHAR(30)</td><td></td><td>sim</td><td>Melhor casamento OCR x tabela letreiro</td><td class='ex'>2772-10_0</td></tr>
+<tr><td><code>confianca</code></td><td>FLOAT</td><td></td><td>sim</td><td>0..1</td><td class='ex'>0.935</td></tr>
+<tr><td><code>latencia_ms</code></td><td>INTEGER</td><td></td><td>sim</td><td>Captura -&gt; alerta</td><td class='ex'>902</td></tr>
+<tr><td><code>alerta_emitido</code></td><td>BOOL</td><td></td><td>não</td><td>O app avisou &#x27;é o seu ônibus&#x27;?</td><td class='ex'>1</td></tr>
+<tr><td><code>resultado</code></td><td>VARCHAR(15)</td><td></td><td>não</td><td>acerto | erro | nao_confirmado</td><td class='ex'>acerto</td></tr>
+<tr><td><code>condicao_luz</code></td><td>VARCHAR(10)</td><td></td><td>sim</td><td>dia | noite | nao_informado</td><td class='ex'>noite</td></tr>
+<tr><td><code>origem</code></td><td>VARCHAR(15)</td><td></td><td>não</td><td>teste_campo | producao | simulado</td><td class='ex'>simulado</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>indicador_reconhecimento_diario</code> <span class="n">9 linhas</span></h3>
+<p>Indicadores de impacto por dia e origem (DAG 2). <em>Camada: curada (DAG 2).</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>dia</code></td><td>VARCHAR(10)</td><td>PK</td><td>não</td><td>AAAA-MM-DD</td><td class='ex'>2026-11-05</td></tr>
+<tr><td><code>origem</code></td><td>VARCHAR(15)</td><td>PK</td><td>não</td><td>teste_campo | producao | simulado</td><td class='ex'>simulado</td></tr>
+<tr><td><code>total_eventos</code></td><td>INTEGER</td><td></td><td>não</td><td>Leituras de letreiro no dia</td><td class='ex'>53</td></tr>
+<tr><td><code>eventos_confirmados</code></td><td>INTEGER</td><td></td><td>não</td><td>Leituras com resultado confirmado (acerto/erro)</td><td class='ex'>43</td></tr>
+<tr><td><code>taxa_acerto</code></td><td>FLOAT</td><td></td><td>sim</td><td>acertos / confirmados</td><td class='ex'>0.814</td></tr>
+<tr><td><code>alertas_errados</code></td><td>INTEGER</td><td></td><td>não</td><td>alerta para o ônibus errado (erro crítico)</td><td class='ex'>1</td></tr>
+<tr><td><code>latencia_p50_ms</code></td><td>FLOAT</td><td></td><td>sim</td><td>Mediana do tempo captura-&gt;alerta</td><td class='ex'>885.0</td></tr>
+<tr><td><code>latencia_p95_ms</code></td><td>FLOAT</td><td></td><td>sim</td><td>Percentil 95 do tempo captura-&gt;alerta</td><td class='ex'>1668.7999999999997</td></tr>
+<tr><td><code>taxa_acerto_noite</code></td><td>FLOAT</td><td></td><td>sim</td><td>Taxa de acerto só com condicao_luz = noite</td><td class='ex'>0.7647</td></tr>
+<tr><td><code>calculado_em</code></td><td>DATETIME</td><td></td><td>não</td><td>Quando o DAG 2 calculou (UTC)</td><td class='ex'>2026-11-12 01:37:10.181320</td></tr>
+</tbody></table></section>
+<section class="tabela"><h3><code>carga_controle</code> <span class="n">4 linhas</span></h3>
+<p>Linhagem: cada execução do DAG 1, versão do feed e resultado. <em>Camada: controle / linhagem.</em></p>
+<table><thead><tr><th>Coluna</th><th>Tipo</th><th>Chave</th><th>Nulo</th><th>Descrição</th><th>Exemplo</th></tr></thead><tbody>
+<tr><td><code>execucao_id</code></td><td>VARCHAR(40)</td><td>PK</td><td>não</td><td>gtfs_&lt;timestamp UTC&gt;_&lt;sha8&gt;</td><td class='ex'>gtfs_20261112T013707487421_457293b8</td></tr>
+<tr><td><code>fonte</code></td><td>VARCHAR(120)</td><td></td><td>não</td><td>Nome da fonte de dados</td><td class='ex'>SPTrans GTFS (Mobility Database mdb-8)</td></tr>
+<tr><td><code>url</code></td><td>VARCHAR(255)</td><td></td><td>não</td><td>De onde o arquivo foi baixado</td><td class='ex'>https://files.mobilitydatabase.org/mdb-8/latest.zip</td></tr>
+<tr><td><code>sha256_arquivo</code></td><td>VARCHAR(64)</td><td></td><td>não</td><td>Hash do zip: identifica a versão do feed</td><td class='ex'>457293b83e34e95e2f8d246dd22f9934525c5941d863d5f26b933cd9238f</td></tr>
+<tr><td><code>iniciada_em</code></td><td>DATETIME</td><td></td><td>não</td><td>UTC</td><td class='ex'>2026-11-12 01:37:08.600798</td></tr>
+<tr><td><code>finalizada_em</code></td><td>DATETIME</td><td></td><td>sim</td><td>UTC</td><td class='ex'>2026-11-12 01:37:10.083106</td></tr>
+<tr><td><code>status</code></td><td>VARCHAR(15)</td><td></td><td>não</td><td>sucesso | falha | ignorada</td><td class='ex'>sucesso</td></tr>
+<tr><td><code>linhas_carregadas</code></td><td>TEXT</td><td></td><td>sim</td><td>JSON {tabela: qtd}</td><td class='ex'>{&quot;linha&quot;: 1365, &quot;parada&quot;: 22270, &quot;letreiro&quot;: 2268, &quot;itinerar</td></tr>
+<tr><td><code>observacao</code></td><td>TEXT</td><td></td><td>sim</td><td>Resumo da qualidade ou mensagem de erro</td><td class='ex'>{&quot;qualidade&quot;: {&quot;total&quot;: 18, &quot;falhas&quot;: 0, &quot;avisos&quot;: 0}}</td></tr>
+</tbody></table></section>

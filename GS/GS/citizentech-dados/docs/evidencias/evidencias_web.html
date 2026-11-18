@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evidências do Pipeline CitizenTech — Airflow</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #343a40;
+        }
+        h1 { color: #0f172a; border-bottom: 2px solid #6366f1; padding-bottom: 10px; }
+        .container { background: white; padding: 20px; border-radius: 8; margin-bottom: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .screenshot { margin: 20px 0; text-align: center; }
+        .screenshot img { max-width: 100%; height: auto; border: 1px solid #e2e8f0; border-radius: 4; }
+        .justificativa { background: #f1f5f9; padding: 15px; border-radius: 4; margin-top: 10px; font-size: 0.9em; }
+        .link-repo { color: #059669; font-weight: bold; text-decoration: none; }
+        .link-repo:hover { text-decoration: underline; }
+        .topicos { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 20px; }
+        .topico-card { background: white; padding: 15px; border-radius: 4; border-left: 4px solid #6366f1; }
+        .topico-card h3 { margin-top: 0; color: #0f172a; }
+    </style>
+</head>
+<body>
+    <h1>Evidências do Pipeline CitizenTech — Componentes Dados</h1>
+    
+    <p>Este documento reúne prints da interface do Apache Airflow como evidência do funcionamento do pipeline de dados do projeto CitizenTech. Cada print vem com sua justificativa alinhada aos critérios de entrega.</p>
+    
+    <a href="https://github.com/guicvsub/GS-2026" class="link-repo" target="_blank" style="color: #059669; font-weight: bold;">Repositório no GitHub</a> ·
+    <a href="../Entrega_BigData_CitizenTech.pdf" target="_blank">PDF Único com Diagrama e Dicionário</a>
+    
+    <div class="topicos">
+        <div class="topico-card">
+            <h3>📦 Link do repositório + PDF único</h3>
+            <p>As evidências abaixo comprovam que o pipeline está funcional e o PDF de entrega contém o diagrama de arquitetura e o dicionário de dados necessários para a avaliação.</p>
+        </div>
+        <div class="topico-card">
+            <h3>📅 Portal da disciplina até 19/11, 23h55</h3>
+            <p>Todos os prints foram capturados e organizados para envio até o prazo limite. Um único envio por equipe é suficiente, contendo todos os artefatos.</p>
+        </div>
+        <div class="topico-card">
+            <h3>🔢 14 pontos: Pipeline 8 + Arquitetura 6</h3>
+            <p>Os prints validam o ponto de "Pipeline funcional" (8 pontos): DAGs executando, dados sendo carregados, qualidade passando. E a arquitetura/documentação pontua 6 pontos com diagrama e dicionário.</p>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Prints do Airflow</h2>
+        
+        <div class="screenshot">
+            <img src="prints_airflow/00_airflow_login.png" alt="Login do Airflow">
+            <div class="justificativa">
+                <strong>Tela de login do Airflow (localhost:8080)</strong><br>
+                Justificativa: Comprova o acesso à interface de orquestração. O usuário admin (padrão da disciplina) logado confirma que o ambiente está configurado e pronto para receber os DAGs.
+            </div>
+        </div>
+        
+        <div class="screenshot">
+            <img src="prints_airflow/01_airflow_home_dags.png" alt="Airflow Home DAGs">
+            <div class="justificativa">
+                <strong>Página inicial do Airflow — Grid de DAGs</strong><br>
+                Justificativa: Visão geral dos dois DAGs ativos (citizentech_gtfs_sptrans e citizentech_indicadores_reconhecimento). Confirma que ambos estão carregados no Airflow 2.10.5 e prontos para execução.
+            </div>
+        </div>
+        
+        <div class="screenshot">
+            <img src="prints_airflow/02_dag_gtfs_grid.png" alt="DAG GTFS Grid">
+            <div class="justificativa">
+                <strong>DAG citizentech_gtfs_sptrans — Grid</strong><br>
+                Justificativa: Exibe o grid da DAG 1 e o estado de cada task. Na execução mostrada, criar_schema, extrair e versao_nova concluíram, enquanto transformar, checar_qualidade, carregar e publicar_pacote_offline foram ignoradas pelo short-circuit por já existir carga com o mesmo SHA-256. Valida o "Pipeline funcional" e a idempotência.
+            </div>
+        </div>
+        
+        <div class="screenshot">
+            <img src="prints_airflow/03_dag_gtfs_graph.png" alt="DAG GTFS Graph">
+            <div class="justificativa">
+                <strong>DAG citizentech_gtfs_sptrans — Graph</strong><br>
+                Justificativa: Visualização gráfica do fluxo da DAG 1 mostrando todas as tasks e suas dependências (criar_schema >> extrair >> versao_nova >> transformar >> checar_qualidade >> carregar >> publicar_pacote_offline). Na execução exibida, as etapas posteriores a versao_nova aparecem como "skipped" por short-circuit, demonstrando a idempotência da arquitetura orquestrada de ETL/ELT.
+            </div>
+        </div>
+        
+        <div class="screenshot">
+            <img src="prints_airflow/04_dag_indicadores_grid.png" alt="DAG Indicadores Grid">
+            <div class="justificativa">
+                <strong>DAG citizentech_indicadores_reconhecimento — Grid</strong><br>
+                Justificativa: Grid da DAG 2 (indicadores de impacto). Mostra a task de simulação (com parâmetro `simular: true`) e o cálculo de indicadores. Valida o pipeline de geração de métricas de acerto/erro do reconhecimento de letreiros.
+            </div>
+        </div>
+        
+        <div class="screenshot">
+            <img src="prints_airflow/05_dag_indicadores_graph.png" alt="DAG Indicadores Graph">
+            <div class="justificativa">
+                <strong>DAG citizentech_indicadores_reconhecimento — Graph</strong><br>
+                Justificativa: Fluxo gráfico da DAG 2 mostrando a simulação de eventos e o cálculo dos indicadores diários (taxa de acerto p50/p95, latência, acerto à noite). Comprova a transformação de eventos brutos em dados analíticos para o MVP.
+            </div>
+        </div>
+        
+        <div class="screenshot">
+            <img src="prints_airflow/06_dagruns_gtfs.png" alt="DAG Runs GTFS">
+            <div class="justificativa">
+                <strong>Historico de DAG Runs — citizentech_gtfs_sptrans</strong><br>
+                Justificativa: Lista de execuções (dagrun) da DAG 1, ambas com estado "success". Na reexecução com o mesmo SHA-256, as tasks de transformação e carga ficaram "skipped" pelo short-circuit e o registro em carga_controle ficou como "ignorada" (sem duplicação de dados). Valida o critério de "carga não duplica".
+            </div>
+        </div>
+        
+        <div class="screenshot">
+            <img src="prints_airflow/07_dagruns_indicadores.png" alt="DAG Runs Indicadores">
+            <div class="justificativa">
+                <strong>Historico de DAG Runs — citizentech_indicadores_reconhecimento</strong><br>
+                Justificativa: Execuções da DAG 2 mostrando a geração de 500 eventos simulados e o cálculo dos indicadores para os últimos 7 dias. Demonstra que o pipeline funciona de forma repetível e diária, conforme o schedule configurado.
+            </div>
+        </div>
+    </div>
+    
+    <div style="margin-top: 40px; padding: 20px; background: #e2e8f0; border-radius: 4;">
+        <h3>Artefatos Entregues</h3>
+        <ul>
+            <li><strong>PDF Único:</strong> <a href="Entrega_BigData_CitizenTech.pdf" download>Entrega_BigData_CitizenTech.pdf</a> — contém diagrama de arquitetura e dicionário de dados</li>
+            <li><strong>Repositório:</strong> Link para o GitHub com todo o pipeline (DAGs, scripts, README)</li>
+            <li><strong>Data/Hora:</strong> Geração em 13/11/2026</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,10 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+logs/
+data/raw/
+data/staging/
+data/*.db
+# data/serving/letreiros.json é versionado de propósito: é o pacote que o app usa offline

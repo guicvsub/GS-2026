@@ -1,0 +1,9 @@
+2026-11-11 22:37:11,304 INFO pipeline.extract: Baixando https://files.mobilitydatabase.org/mdb-8/latest.zip
+2026-11-11 22:37:14,119 INFO pipeline.extract: Raw salvo em data/raw/gtfs/20261112_457293b8/feed.zip (14313809 bytes, sha256 457293b83e34)
+2026-11-11 22:37:14,130 INFO root: Versão 457293b83e34 já está no banco; carga ignorada.
+{
+  "gtfs": {
+    "status": "ignorada",
+    "execucao_id": "gtfs_20261112T013714108855_457293b8"
+  }
+}

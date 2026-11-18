@@ -46,27 +46,75 @@ tests/                      testes com mini-GTFS sintético
 
 ---
 
-## 🖼️ Printfs do Airflow — Evidências de Execução
+## 🖼️ Prints do Airflow — Evidências de Execução
 
-As prints abaixo comprovam o pipeline rodando de forma orquestrada. Cada uma está linkada para visualização direta no repositório.
+As imagens abaixo são exibidas **diretamente neste README** e comprovam o pipeline rodando de forma orquestrada no Apache Airflow 2.10.5. Cada print vem seguido da justificativa do que ele evidencia na entrega.
+
+---
 
 ### DAG 1 — `citizentech_gtfs_sptrans` (GTFS SPTrans → MySQL)
 
-| Print | Link | Justificativa |
-|---|---|---|
-| **00_airflow_login.png** | `docs/evidencias/prints_airflow/00_airflow_login.png` | Comprova o acesso à interface do Airflow (localhost:8080). O login admin confirma que o ambiente está configurado e pronto para receber os DAGs. |
-| **01_airflow_home_dags.png** | `docs/evidencias/prints_airflow/01_airflow_home_dags.png` | Visão geral dos dois DAGs ativos (citizentech_gtfs_sptrans e citizentech_indicadores_reconhecimento). Confirma que ambos estão carregados no Airflow 2.10.5. |
-| **02_dag_gtfs_grid.png** | `docs/evidencias/prints_airflow/02_dag_gtfs_grid.png` | Grid da DAG 1 mostrando tasks em execução bem-sucedida. Valida o pipeline funcional: extrair → versão nova? → transformar → checar qualidade → carregar → publicar pacote offline. |
-| **03_dag_gtfs_graph.png** | `docs/evidencias/prints_airflow/03_dag_gtfs_graph.png` | Visualização gráfica do fluxo da DAG 1. Demonstra a arquitetura orquestrada de ETL/ELT com todas as dependências entre tasks. |
+#### 00 · Tela de login do Airflow
+
+![Tela de login do Airflow](docs/evidencias/prints_airflow/00_airflow_login.png)
+
+**Justificativa:** comprova que a interface web do Airflow está no ar em `localhost:8080` e protegida por autenticação. É o ponto de entrada do ambiente orquestrado usado em todas as demais evidências.
+
+#### 01 · Visão geral dos DAGs
+
+![Página inicial do Airflow com os dois DAGs](docs/evidencias/prints_airflow/01_airflow_home_dags.png)
+
+**Justificativa:** mostra os dois DAGs da entrega carregados e ativos no Airflow 2.10.5 — `citizentech_gtfs_sptrans` e `citizentech_indicadores_reconhecimento` —, ambos com execuções registradas, owner `equipe-citizentech` e agendamento configurado.
+
+#### 02 · Grid da DAG 1 (histórico de execuções)
+
+![Grid da DAG citizentech_gtfs_sptrans](docs/evidencias/prints_airflow/02_dag_gtfs_grid.png)
+
+**Justificativa:** exibe o grid da DAG de ingestão GTFS e o estado de cada task do fluxo `criar_schema → extrair → versao_nova → transformar → checar_qualidade → carregar → publicar_pacote_offline`. Evidencia o pipeline completo e a atuação do short-circuit na reexecução.
+
+#### 03 · Graph da DAG 1 (dependências)
+
+![Grafo de dependências da DAG citizentech_gtfs_sptrans](docs/evidencias/prints_airflow/03_dag_gtfs_graph.png)
+
+**Justificativa:** apresenta o grafo de dependências da DAG 1. Na execução exibida, `criar_schema`, `extrair` e `versao_nova` concluíram, enquanto as etapas seguintes foram marcadas como *skipped* porque o SHA-256 do feed já estava carregado — prova visual da idempotência do pipeline.
 
 ### DAG 2 — `citizentech_indicadores_reconhecimento` (Eventos → Indicadores)
 
-| Print | Link | Justificativa |
-|---|---|---|
-| **04_dag_indicadores_grid.png** | `docs/evidencias/prints_airflow/04_dag_indicadores_grid.png` | Grid da DAG 2 mostrando a task de simulação (parâmetro `simular: true`) e o cálculo de indicadores. Valida o pipeline de geração de métricas de reconhecimento de letreiros. |
-| **05_dag_indicadores_graph.png** | `docs/evidencias/prints_airflow/05_dag_indicadores_graph.png` | Fluxo gráfico da DAG 2. Demonstra a transformação de eventos brutos em dados analíticos (taxa de acerto p50/p95, latência, acerto à noite). |
-| **06_dagruns_gtfs.png** | `docs/evidencias/prints_airflow/06_dagruns_gtfs.png` | Histórico de execuções (dagrun) da DAG 1. Comprova a idempotência do pipeline: primeira execução com status "sucesso" e reexecução com mesmo SHA-256 tem status "ignorada" (não duplica dados). |
-| **07_dagruns_indicadores.png** | `docs/evidencias/prints_airflow/07_dagruns_indicadores.png` | Histórico de execuções da DAG 2. Demonstra que o pipeline funciona de forma repetível e diária, conforme o schedule configurado. |
+#### 04 · Grid da DAG 2
+
+![Grid da DAG citizentech_indicadores_reconhecimento](docs/evidencias/prints_airflow/04_dag_indicadores_grid.png)
+
+**Justificativa:** comprova a execução bem-sucedida da DAG de indicadores, com as tasks `simular_se_pedido` (parâmetro `simular: true`) e `calcular` concluídas. Valida a geração das métricas diárias de reconhecimento de letreiros a partir dos eventos do app.
+
+#### 05 · Graph da DAG 2
+
+![Grafo da DAG citizentech_indicadores_reconhecimento](docs/evidencias/prints_airflow/05_dag_indicadores_graph.png)
+
+**Justificativa:** mostra o fluxo `simular_se_pedido → calcular`, evidenciando a transformação de eventos brutos em indicadores de impacto: taxa de acerto, latência p50/p95 e desempenho no período noturno.
+
+#### 06 · Histórico de execuções da DAG 1
+
+![Histórico de DAG runs da DAG citizentech_gtfs_sptrans](docs/evidencias/prints_airflow/06_dagruns_gtfs.png)
+
+**Justificativa:** lista os DAG runs da ingestão GTFS, ambos com estado `success`. A reexecução com o mesmo feed teve as etapas de transformação e carga ignoradas pelo short-circuit, sem duplicar dados. Confirma a linhagem registrada em `carga_controle` e o status `ignorada` documentado em `docs/evidencias/02_reexecucao_idempotente.log`.
+
+#### 07 · Histórico de execuções da DAG 2
+
+![Histórico de DAG runs da DAG citizentech_indicadores_reconhecimento](docs/evidencias/prints_airflow/07_dagruns_indicadores.png)
+
+**Justificativa:** lista o DAG run agendado da DAG 2, comprovando a recorrência diária do cálculo dos indicadores e a reprodutibilidade do fluxo.
+
+---
+
+### 📁 Arquivos complementares da pasta `docs/evidencias/`
+
+| Arquivo | Descrição |
+|---|---|
+| [`01_execucao_completa.log`](docs/evidencias/01_execucao_completa.log) | Log da execução completa: download do GTFS, gravação do Raw com SHA-256, contagens do staging, 18 checagens de qualidade aprovadas e carga transacional no MySQL. |
+| [`02_reexecucao_idempotente.log`](docs/evidencias/02_reexecucao_idempotente.log) | Log da reexecução com o mesmo feed. Prova que a versão já carregada é detectada e a carga retorna `"status": "ignorada"`, sem duplicar registros. |
+| [`03_consultas.txt`](docs/evidencias/03_consultas.txt) | Consultas SQL e resultados que comprovam a linhagem em `carga_controle`, o vocabulário de letreiros da linha 8000-10, o alerta de descida por itinerário e a espera estimada por frequência. |
+| [`evidencias_web.html`](docs/evidencias/evidencias_web.html) | Versão navegável das evidências, com os oito prints e as justificativas em uma única página HTML. |
+| [`prints_airflow/`](docs/evidencias/prints_airflow/) | Pasta com as oito capturas de tela do Airflow exibidas acima, além do HTML auxiliar `_login.html` salvo durante a captura. |
 
 ---
 
@@ -140,9 +188,3 @@ O workflow `.github/workflows/pipeline.yml` roda a cada push: testes, carga dos 
 - **shapes.txt (60 MB)** — Fica apenas no Raw; o app não desenha o traçado, só precisa da sequência de paradas.
 
 ---
-
-## 🔗 Link do Repositório
-
-GitHub: [https://github.com/seu-organization/citizentech-dados](https://github.com/seu-organization/citizentech-dados)
-
-*(Substitua pelo link real antes do envio)*

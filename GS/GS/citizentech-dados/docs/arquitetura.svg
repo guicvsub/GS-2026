@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" width="1000" height="560" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .t { font-size: 12px; fill: #0f172a; font-weight: 600; }
+      .s { font-size: 10.5px; fill: #475569; }
+      .k { font-size: 10px; fill: #64748b; letter-spacing: .06em; font-weight: 600; }
+      .lin { stroke: #475569; stroke-width: 1.4; fill: none; marker-end: url(#seta); }
+      .tab { font-size: 10.5px; fill: #0f172a; font-family: Consolas, Menlo, monospace; }
+    </style>
+  </defs>
+  <rect width="1000" height="560" fill="#ffffff"/>
+
+  <!-- rótulos de coluna -->
+  <text x="20" y="24" class="k">FONTES</text>
+  <text x="215" y="24" class="k">ORQUESTRAÇÃO E CAMADAS DE DADOS</text>
+  <text x="800" y="24" class="k">QUEM CONSOME</text>
+
+  <!-- fontes -->
+  <rect x="20" y="62" width="165" height="78" rx="8" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="32" y="85" class="t">GTFS SPTrans</text>
+  <text x="32" y="103" class="s">Mobility Database mdb-8</text>
+  <text x="32" y="118" class="s">zip ~14 MB · sem login</text>
+  <text x="32" y="133" class="s">atualização semanal</text>
+
+  <rect x="20" y="432" width="165" height="78" rx="8" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="32" y="455" class="t">App do MVP</text>
+  <text x="32" y="473" class="s">1 evento por leitura de</text>
+  <text x="32" y="488" class="s">letreiro · sem imagem,</text>
+  <text x="32" y="503" class="s">sem localização, sem nome</text>
+
+  <!-- DAG 1 -->
+  <rect x="215" y="36" width="560" height="104" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="5 4"/>
+  <text x="228" y="56" class="s">Airflow · DAG <tspan font-weight="600" fill="#0f172a">citizentech_gtfs_sptrans</tspan> · segundas 04:00 · retries 2</text>
+  <g>
+    <rect x="228" y="70" width="82" height="52" rx="6" fill="#fff" stroke="#334155"/>
+    <text x="269" y="92" class="t" text-anchor="middle">Extrair</text>
+    <text x="269" y="108" class="s" text-anchor="middle">baixa + hash</text>
+    <rect x="318" y="70" width="82" height="52" rx="6" fill="#fff" stroke="#334155"/>
+    <text x="359" y="92" class="t" text-anchor="middle">Versão nova?</text>
+    <text x="359" y="108" class="s" text-anchor="middle">short-circuit</text>
+    <rect x="408" y="70" width="82" height="52" rx="6" fill="#fff" stroke="#334155"/>
+    <text x="449" y="92" class="t" text-anchor="middle">Transformar</text>
+    <text x="449" y="108" class="s" text-anchor="middle">pandas</text>
+    <rect x="498" y="70" width="82" height="52" rx="6" fill="#fff7ed" stroke="#ea580c"/>
+    <text x="539" y="92" class="t" text-anchor="middle">Qualidade</text>
+    <text x="539" y="108" class="s" text-anchor="middle">18 checagens</text>
+    <rect x="588" y="70" width="82" height="52" rx="6" fill="#fff" stroke="#334155"/>
+    <text x="629" y="92" class="t" text-anchor="middle">Carregar</text>
+    <text x="629" y="108" class="s" text-anchor="middle">1 transação</text>
+    <rect x="678" y="70" width="86" height="52" rx="6" fill="#fff" stroke="#334155"/>
+    <text x="721" y="92" class="t" text-anchor="middle">Publicar</text>
+    <text x="721" y="108" class="s" text-anchor="middle">pacote offline</text>
+    <path d="M310,96 H316" class="lin"/>
+    <path d="M400,96 H406" class="lin"/>
+    <path d="M490,96 H496" class="lin"/>
+    <path d="M580,96 H586" class="lin"/>
+    <path d="M670,96 H676" class="lin"/>
+  </g>
+  <path d="M185,101 H226" class="lin"/>
+
+  <!-- camadas -->
+  <rect x="228" y="180" width="160" height="92" rx="8" fill="#f1f5f9" stroke="#64748b"/>
+  <text x="240" y="201" class="k">RAW · IMUTÁVEL</text>
+  <text x="240" y="220" class="tab">data/raw/gtfs/</text>
+  <text x="240" y="235" class="tab">&lt;data&gt;_&lt;sha8&gt;/feed.zip</text>
+  <text x="240" y="255" class="s">zip original + metadados</text>
+
+  <rect x="408" y="180" width="150" height="92" rx="8" fill="#ecfeff" stroke="#0891b2"/>
+  <text x="420" y="201" class="k">STAGING · PARQUET</text>
+  <text x="420" y="220" class="tab">data/staging/</text>
+  <text x="420" y="235" class="tab">&lt;execucao_id&gt;/*.parquet</text>
+  <text x="420" y="255" class="s">tipado, normalizado</text>
+
+  <rect x="588" y="168" width="187" height="250" rx="8" fill="#f0fdf4" stroke="#16a34a"/>
+  <text x="600" y="189" class="k">CURADA · MYSQL 8.4</text>
+  <text x="600" y="210" class="tab">linha</text>
+  <text x="600" y="226" class="tab">letreiro</text>
+  <text x="600" y="242" class="tab">parada</text>
+  <text x="600" y="258" class="tab">itinerario</text>
+  <text x="600" y="274" class="tab">frequencia</text>
+  <line x1="600" y1="285" x2="763" y2="285" stroke="#bbf7d0"/>
+  <text x="600" y="303" class="tab">evento_reconhecimento</text>
+  <text x="600" y="319" class="tab">indicador_reconhecimento_</text>
+  <text x="600" y="333" class="tab">  diario</text>
+  <line x1="600" y1="345" x2="763" y2="345" stroke="#bbf7d0"/>
+  <text x="600" y="363" class="tab">carga_controle</text>
+  <text x="600" y="380" class="s">linhagem: versão (sha256),</text>
+  <text x="600" y="395" class="s">status e contagens por carga</text>
+
+  <path d="M269,122 V178" class="lin"/>
+  <path d="M449,122 V178" class="lin"/>
+  <path d="M629,122 V166" class="lin"/>
+  <path d="M388,226 H406" class="lin"/>
+  <path d="M558,226 H586" class="lin"/>
+
+  <!-- DAG 2 -->
+  <rect x="215" y="432" width="345" height="104" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="5 4"/>
+  <text x="228" y="452" class="s">Airflow · DAG <tspan font-weight="600" fill="#0f172a">citizentech_indicadores_reconhecimento</tspan> · diário 01:30</text>
+  <rect x="228" y="466" width="140" height="52" rx="6" fill="#fff" stroke="#334155"/>
+  <text x="298" y="488" class="t" text-anchor="middle">Simular (opcional)</text>
+  <text x="298" y="504" class="s" text-anchor="middle">origem = simulado</text>
+  <rect x="400" y="466" width="146" height="52" rx="6" fill="#fff" stroke="#334155"/>
+  <text x="473" y="488" class="t" text-anchor="middle">Calcular indicadores</text>
+  <text x="473" y="504" class="s" text-anchor="middle">últimos 7 dias</text>
+  <path d="M368,492 H398" class="lin"/>
+
+  <!-- app grava eventos; DAG2 lê e escreve -->
+  <path d="M185,470 H200 V410 H586" class="lin"/>
+  <text x="300" y="404" class="s">API grava evento_reconhecimento</text>
+  <path d="M546,480 H570 V330 H586" class="lin"/>
+
+  <!-- consumo -->
+  <rect x="800" y="62" width="180" height="70" rx="8" fill="#fdf4ff" stroke="#a21caf"/>
+  <text x="812" y="84" class="t">Visão computacional</text>
+  <text x="812" y="101" class="s">casa texto do OCR com o</text>
+  <text x="812" y="116" class="s">letreiro real (matching.py)</text>
+
+  <rect x="800" y="150" width="180" height="70" rx="8" fill="#fdf4ff" stroke="#a21caf"/>
+  <text x="812" y="172" class="t">App no celular</text>
+  <text x="812" y="189" class="s">letreiros.json (536 KB)</text>
+  <text x="812" y="204" class="s">funciona sem internet</text>
+
+  <rect x="800" y="238" width="180" height="84" rx="8" fill="#fdf4ff" stroke="#a21caf"/>
+  <text x="812" y="260" class="t">API do MVP</text>
+  <text x="812" y="277" class="s">alerta de descida (itinerário)</text>
+  <text x="812" y="292" class="s">espera estimada (frequência)</text>
+  <text x="812" y="307" class="s">linhas que param no ponto</text>
+
+  <rect x="800" y="432" width="180" height="70" rx="8" fill="#fdf4ff" stroke="#a21caf"/>
+  <text x="812" y="454" class="t">Pitch / BI</text>
+  <text x="812" y="471" class="s">taxa de acerto, alertas</text>
+  <text x="812" y="486" class="s">errados, latência p50/p95</text>
+
+  <path d="M764,96 H782 V185 H798" class="lin"/>
+  <path d="M782,96 V97 H798" class="lin"/>
+  <path d="M775,280 H798" class="lin"/>
+  <path d="M775,330 H790 V467 H798" class="lin"/>
+</svg>

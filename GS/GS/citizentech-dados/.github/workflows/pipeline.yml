@@ -1,0 +1,91 @@
+# Roda a cada push: testes + execução real dos dois DAGs no Airflow 2.10.5,
+# carregando num MySQL 8.4 efêmero. Os logs e o pacote offline ficam como
+# artefatos da execução (evidência do pipeline rodando).
+name: pipeline-dados
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * 1"  # segunda 04:00 em SP: confirma que o feed real continua válido
+
+jobs:
+  airflow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-efemero
+          MYSQL_DATABASE: citizentech
+          MYSQL_USER: citizentech
+          MYSQL_PASSWORD: ci-efemero
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -pci-root-efemero"
+          --health-interval=10s --health-retries=10
+    defaults:
+      run:
+        shell: bash  # bash -eo pipefail: o `| tee` não esconde falha
+    env:
+      AIRFLOW_HOME: ${{ github.workspace }}/.airflow
+      AIRFLOW__CORE__DAGS_FOLDER: ${{ github.workspace }}/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: America/Sao_Paulo
+      PYTHONPATH: ${{ github.workspace }}
+      CITIZENTECH_DATA_DIR: ${{ github.workspace }}/data
+      CITIZENTECH_DB_URL: mysql+pymysql://citizentech:ci-efemero@127.0.0.1:3306/citizentech?charset=utf8mb4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar Airflow 2.10.5 + dependências (constraints oficiais)
+        run: |
+          pip install "apache-airflow==2.10.5" PyMySQL pyarrow cryptography pytest \
+            --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt"
+      - name: Testes unitários
+        run: pytest -q
+      - name: DAGs carregam sem erro
+        run: |
+          airflow db migrate
+          python -c "from airflow.models import DagBag; b = DagBag(include_examples=False); print(sorted(b.dag_ids)); assert not b.import_errors, b.import_errors; assert len(b.dag_ids) == 2"
+      - name: Executar DAG 1 (GTFS SPTrans -> MySQL)
+        run: airflow dags test citizentech_gtfs_sptrans 2>&1 | tee dag1.log
+      - name: Executar DAG 1 de novo (deve ignorar a mesma versão)
+        run: airflow dags test citizentech_gtfs_sptrans 2>&1 | tee dag1_reexecucao.log
+      - name: Executar DAG 2 (indicadores, com simulação)
+        run: |
+          airflow dags test citizentech_indicadores_reconhecimento --conf '{"simular": true}' 2>&1 | tee dag2.log
+      - name: Conferir dados carregados no MySQL
+        run: |
+          python - <<'EOF' | tee contagens.txt
+          import os
+          from sqlalchemy import create_engine, text
+          e = create_engine(os.environ["CITIZENTECH_DB_URL"])
+          with e.connect() as c:
+              for t in ["linha", "letreiro", "parada", "itinerario", "frequencia",
+                        "evento_reconhecimento", "indicador_reconhecimento_diario"]:
+                  print(f"{t}: {c.execute(text(f'SELECT COUNT(*) FROM {t}')).scalar()}")
+              for r in c.execute(text("SELECT execucao_id, status, linhas_carregadas FROM carga_controle ORDER BY iniciada_em")):
+                  print(tuple(r))
+              # `airflow dags test` nem sempre sai com erro quando uma task falha: conferimos o resultado
+              assert c.execute(text("SELECT COUNT(*) FROM letreiro")).scalar() > 500
+              st = [r[0] for r in c.execute(text("SELECT status FROM carga_controle ORDER BY iniciada_em"))]
+              assert st == ["sucesso", "ignorada"], st
+              assert c.execute(text("SELECT COUNT(*) FROM indicador_reconhecimento_diario")).scalar() > 0
+          EOF
+      - name: Guardar evidências
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencias-pipeline
+          path: |
+            dag1.log
+            dag1_reexecucao.log
+            dag2.log
+            contagens.txt
+            data/serving/letreiros.json
+            .airflow/logs/

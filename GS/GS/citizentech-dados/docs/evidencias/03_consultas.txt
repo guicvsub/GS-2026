@@ -1,0 +1,60 @@
+-- Linhagem (carga_controle)
+SELECT execucao_id, status, sha256_arquivo, linhas_carregadas FROM carga_controle ORDER BY iniciada_em
+                        execucao_id   status                                                   sha256_arquivo                                                                            linhas_carregadas
+gtfs_20261112T013707487421_457293b8  sucesso 457293b83e34e95e2f8d246dd22f9934525c5941d863d5f26b933cd9238f4166 {"linha": 1365, "parada": 22270, "letreiro": 2268, "itinerario": 99071, "frequencia": 40337}
+gtfs_20261112T013714108855_457293b8 ignorada 457293b83e34e95e2f8d246dd22f9934525c5941d863d5f26b933cd9238f4166                                                                                         None
+gtfs_20261113T202011192633_ae07f1c3  sucesso ae07f1c3daa87eafc11cca8729c34eecdb9d82ecaabb2d7888ed46dc1c8794cc {"linha": 1366, "parada": 22266, "letreiro": 2269, "itinerario": 99031, "frequencia": 40353}
+gtfs_20261113T232324906301_ae07f1c3 ignorada ae07f1c3daa87eafc11cca8729c34eecdb9d82ecaabb2d7888ed46dc1c8794cc                                                                                         None
+
+-- Letreiros da linha 8000-10 (o que o OCR precisa reconhecer)
+SELECT letreiro_id, texto_letreiro, texto_normalizado FROM letreiro WHERE route_id = '8000-10'
+letreiro_id                texto_letreiro            texto_normalizado
+  8000-10_0 8000-10 Pça. Ramos De Azevedo 8000 10 PCA RAMOS DE AZEVEDO
+  8000-10_1            8000-10 Term. Lapa            8000 10 TERM LAPA
+
+-- Alerta de descida: primeiras paradas do 8000-10 sentido 0, com nome e tempo previsto
+SELECT i.ordem, p.nome, ROUND(i.minutos_desde_inicio, 1) AS min, i.distancia_proxima_m FROM itinerario i JOIN parada p ON p.stop_id = i.stop_id WHERE i.letreiro_id = '8000-10_0' ORDER BY i.ordem LIMIT 6
+ ordem                    nome  min  distancia_proxima_m
+     1 Terminal Lapa - Plat. 1  0.0                343.5
+     2               Catao B/C  2.9                232.2
+     3             Scipiao B/C  5.9                377.1
+     4          Vespasiano B/C  8.8                532.5
+     5                Cornelia 11.7                679.8
+     6        Sesc Pompeia B/C 14.7                429.5
+
+-- Espera estimada sem tempo real: intervalo do 8000-10 sentido 0 por faixa
+SELECT hora_inicio, hora_fim, intervalo_min FROM frequencia WHERE letreiro_id = '8000-10_0' ORDER BY hora_inicio LIMIT 6
+hora_inicio hora_fim  intervalo_min
+   04:00:00 04:59:00           60.0
+   05:00:00 05:59:00           12.0
+   06:00:00 06:59:00            8.0
+   07:00:00 07:59:00            7.0
+   08:00:00 08:59:00           10.0
+   09:00:00 09:59:00           30.0
+
+-- Linhas que passam numa parada (ex.: a 1a parada do 8000-10)
+SELECT l.texto_letreiro FROM itinerario i JOIN letreiro l ON l.letreiro_id = i.letreiro_id WHERE i.stop_id = (SELECT stop_id FROM itinerario WHERE letreiro_id = '8000-10_0' AND ordem = 1) ORDER BY 1 LIMIT 8
+               texto_letreiro
+ 8000-1 Pça. Ramos De Azevedo
+8000-10 Pça. Ramos De Azevedo
+           N102-11 Term. Lapa
+N102-11 Term. Pq. D. Pedro Ii
+
+-- Indicadores diários (origem = simulado: NÃO são resultados medidos)
+SELECT dia, origem, total_eventos, taxa_acerto, alertas_errados, latencia_p50_ms, taxa_acerto_noite FROM indicador_reconhecimento_diario ORDER BY dia
+       dia   origem  total_eventos  taxa_acerto  alertas_errados  latencia_p50_ms  taxa_acerto_noite
+2026-11-05 simulado             53       0.8140                1            885.0             0.7647
+2026-11-06 simulado              8       1.0000                0            989.0             1.0000
+2026-11-07 simulado             60       0.8200                1            900.0             0.7619
+2026-11-08 simulado             74       0.7869                1            944.5             0.6957
+2026-11-09 simulado             72       0.8276                0            869.5             0.7000
+2026-11-10 simulado             79       0.8873                0            916.0             0.7619
+2026-11-11 simulado             77       0.8182                0            880.0             0.7727
+2026-11-12 simulado             75       0.8730                0            896.0             0.7500
+2026-11-13 simulado             63       0.8491                1            902.0             0.7059
+
+-- Casamento OCR -> letreiro (pipeline/matching.py) sobre os letreiros reais carregados
+'8OOO-1O TERM. LAPA'         -> 8000-10_1   score=0.906 ambiguo=False
+'1O6A-1O METRO SANTANA'      -> 106A-10_1   score=0.962 ambiguo=False
+'107T-10 TERM PINHEIROS'     -> 107T-10_0   score=1.0 ambiguo=False
+'PCA RAMOS DE AZEVEDO'       -> 8000-1_0    score=0.851 ambiguo=True (empata com 8700-1_0)

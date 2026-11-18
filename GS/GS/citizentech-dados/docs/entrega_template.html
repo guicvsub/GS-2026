@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Pipeline de Dados do MVP CitizenTech</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 16mm 14mm; }
+  :root { --tinta: #0f172a; --suave: #475569; --linha: #e2e8f0; --acento: #15803d; --fundo: #f8fafc; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; color: var(--tinta); font-size: 10.5pt; line-height: 1.45; margin: 0; background: #fff; }
+  h1 { font-size: 22pt; margin: 0 0 4px; letter-spacing: -.01em; }
+  h2 { font-size: 14pt; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--tinta); break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 16px 0 4px; break-after: avoid; }
+  h4 { font-size: 10.5pt; margin: 14px 0 4px; break-after: avoid; }
+  p { margin: 4px 0 8px; }
+  a { color: #1d4ed8; }
+  code, pre, .tab { font-family: Consolas, Menlo, monospace; font-size: 9pt; }
+  .capa { border-left: 6px solid var(--acento); padding: 6px 0 6px 16px; margin-bottom: 18px; }
+  .capa .sub { color: var(--suave); font-size: 11pt; }
+  .meta { display: grid; grid-template-columns: 150px 1fr; gap: 3px 12px; font-size: 10pt; margin-top: 10px; }
+  .meta b { color: var(--suave); font-weight: 600; }
+  .preencher { background: #fef9c3; padding: 0 4px; border-radius: 3px; }
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0; }
+  .kpi { border: 1px solid var(--linha); border-radius: 8px; padding: 8px 10px; background: var(--fundo); }
+  .kpi .v { font-size: 15pt; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kpi .r { font-size: 8.5pt; color: var(--suave); }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0 10px; font-size: 9pt; }
+  th, td { border-bottom: 1px solid var(--linha); padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: var(--fundo); font-weight: 600; }
+  tr { break-inside: avoid; }
+  td.ex { color: var(--suave); font-family: Consolas, Menlo, monospace; font-size: 8.5pt; word-break: break-all; }
+  .tabela h3 .n { font-weight: 400; color: var(--suave); font-size: 9.5pt; margin-left: 6px; }
+  pre { background: var(--fundo); border: 1px solid var(--linha); border-radius: 6px; padding: 8px 10px; white-space: pre-wrap; word-break: break-all; margin: 4px 0 8px; }
+  pre.sql { color: #334155; }
+  table.res { font-family: Consolas, Menlo, monospace; font-size: 8.5pt; }
+  .figura { border: 1px solid var(--linha); border-radius: 8px; padding: 6px; margin: 8px 0; }
+  .figura svg { width: 100%; height: auto; display: block; }
+  .nota { border-left: 3px solid #ca8a04; background: #fefce8; padding: 6px 10px; margin: 8px 0; font-size: 9.5pt; }
+  .ok { color: var(--acento); font-weight: 600; }
+  .falha { color: #b91c1c; font-weight: 600; }
+  .quebra { break-before: page; }
+  ol, ul { margin: 4px 0 8px; padding-left: 20px; }
+  li { margin: 2px 0; }
+</style>
+</head>
+<body>
+
+<div class="capa">
+  <div class="sub">FIAP · Global Solution 2026.2 · CitizenTech · Engenharia de Software 4º ano</div>
+  <h1>Pipeline de Dados do MVP CitizenTech</h1>
+  <div class="sub">Big Data Architecture &amp; Data Integration · Profa. Ana Machado</div>
+  <div class="meta">
+    <b>Produto</b><span>Assistente de mobilidade por ônibus para pessoas cegas e com baixa visão</span>
+    <b>Equipe</b><span>{{EQUIPE}}</span>
+    <b>Repositório</b><span>{{REPO}}</span>
+    <b>Vídeo / prints</b><span>{{VIDEO}}</span>
+    <b>Cidade piloto</b><span>São Paulo (SP) · dados da SPTrans</span>
+    <b>Gerado em</b><span>{{DATA}}</span>
+  </div>
+</div>
+
+<h2>1. O que este componente entrega</h2>
+<p>O componente <b>Dados</b> é um pipeline orquestrado no Apache Airflow que leva o GTFS oficial da SPTrans do arquivo bruto até tabelas prontas no MySQL, consumidas pelo MVP em três momentos do uso: <b>reconhecer</b> o ônibus que chegou (vocabulário de letreiros para o OCR), <b>orientar</b> a viagem (sequência de paradas para o alerta de descida) e <b>estimar</b> a espera quando não há dado em tempo real (frequência por faixa horária). Um segundo DAG transforma os eventos de reconhecimento gravados pelo app em indicadores de impacto.</p>
+<div class="kpis">{{KPIS}}</div>
+<p>A execução é <b>repetível e idempotente</b>: cada versão do feed é identificada pelo SHA-256; rodar de novo com a mesma versão não recarrega nada, e uma versão nova substitui a anterior em uma única transação.</p>
+
+<h2>2. Arquitetura</h2>
+<div class="figura">{{DIAGRAMA}}</div>
+<table>
+  <thead><tr><th style="width:22%">Camada</th><th>O que guarda</th><th style="width:34%">Por quê</th></tr></thead>
+  <tbody>
+    <tr><td><b>Raw</b><br><code>data/raw/gtfs/&lt;data&gt;_&lt;sha8&gt;/</code></td><td>Zip original do feed e um <code>_metadados.json</code> (URL, sha256, tamanho, arquivos).</td><td>Imutável: permite reprocessar e auditar sem depender da fonte continuar no ar.</td></tr>
+    <tr><td><b>Staging</b><br><code>data/staging/&lt;execucao_id&gt;/</code></td><td>Parquet tipado e normalizado de cada tabela.</td><td>Formato colunar, compacto, com tipos; é sobre ele que roda o portão de qualidade.</td></tr>
+    <tr><td><b>Curada</b><br>MySQL 8.4 <code>citizentech</code></td><td>Tabelas de referência (GTFS), eventos operacionais, indicadores e linhagem.</td><td>Contrato estável com a API do MVP; consultas por chave com índices.</td></tr>
+    <tr><td><b>Serving offline</b><br><code>data/serving/letreiros.json</code></td><td>Todos os letreiros (536 KB).</td><td>O celular compara o OCR com a linha escolhida mesmo sem internet no ponto.</td></tr>
+  </tbody>
+</table>
+
+<h3>Decisões técnicas</h3>
+<table>
+  <thead><tr><th style="width:26%">Decisão</th><th>Justificativa</th></tr></thead>
+  <tbody>
+    <tr><td>Airflow 2.10.5, LocalExecutor, Docker Compose</td><td>Atende à orquestração pedida no enunciado com o menor número de serviços (sem Celery/Redis). Os DAGs só orquestram; a lógica fica no pacote <code>pipeline/</code>, testável sem Airflow.</td></tr>
+    <tr><td>ETL em Python/pandas</td><td>Volume pequeno (≈165 mil linhas por carga, &lt;20 s): cabe em memória; Spark seria custo sem ganho. A arquitetura em camadas permite trocar o motor se o volume crescer (ex.: várias cidades).</td></tr>
+    <tr><td>Short-circuit por SHA-256</td><td>Evita recarga e versões duplicadas; registra a execução como <code>ignorada</code> em <code>carga_controle</code>.</td></tr>
+    <tr><td>Carga full-refresh transacional</td><td>O GTFS é publicado como foto completa. Apagar e inserir dentro de uma transação, com reconciliação de contagem, garante que o app nunca leia uma carga pela metade.</td></tr>
+    <tr><td>Portão de qualidade antes da carga</td><td>Falha crítica interrompe o DAG e preserva a última versão boa no banco.</td></tr>
+    <tr><td>Uma viagem de referência por linha e sentido</td><td>A SPTrans publica uma viagem por sentido e modela horários em <code>frequencies.txt</code>; o itinerário vem dessa viagem e a espera vem da frequência.</td></tr>
+    <tr><td><code>shapes.txt</code> só no raw</td><td>60 MB de traçado que o app não usa; o alerta de descida depende da sequência de paradas.</td></tr>
+  </tbody>
+</table>
+
+<h2 class="quebra">3. Fontes de dados</h2>
+<table>
+  <thead><tr><th style="width:22%">Fonte</th><th>Detalhes</th><th style="width:22%">Uso</th></tr></thead>
+  <tbody>
+    <tr><td><b>GTFS estático SPTrans</b></td><td>Publicado pela SPTrans. O download oficial exige cadastro; usamos o espelho público do <a href="https://mobilitydatabase.org">Mobility Database</a>, feed <code>mdb-8</code> (<a href="https://files.mobilitydatabase.org/mdb-8/latest.zip">latest.zip</a>), que replica cada versão publicada. Versão carregada: sha256 <code>{{SHA}}</code>. Arquivos usados: routes, trips, stops, stop_times, frequencies. Codificação detectada por arquivo (UTF-8, com fallback para Windows-1252).</td><td>linha, letreiro, parada, itinerario, frequencia</td></tr>
+    <tr><td><b>Eventos do app</b></td><td>Um registro por leitura de letreiro, gravado pela API do MVP em <code>evento_reconhecimento</code>. Sem imagem, sem localização e sem identificação pessoal.</td><td>indicador_reconhecimento_diario</td></tr>
+    <tr><td><b>Eventos simulados</b> (temporário)</td><td>Gerados pelo DAG 2 quando chamado com <code>{"simular": true}</code>, sempre com <code>origem = 'simulado'</code>. Letreiros sorteados entre os reais. Premissas: acerto de 90% de dia e 70% à noite, 35% das leituras à noite, 30% dos ônibus são a linha esperada, 20% dos erros confundem com a linha esperada, 15% sem confirmação, latência lognormal com mediana de 900 ms, alerta só com confiança ≥ 0,75.</td><td>Demonstrar o DAG 2 antes dos testes de campo. <b>Não são resultados do produto.</b></td></tr>
+  </tbody>
+</table>
+
+<h2>4. DAGs</h2>
+<h3><code>citizentech_gtfs_sptrans</code> · segundas 04:00 (America/Sao_Paulo) · 2 retries de 5 min</h3>
+<table>
+  <thead><tr><th style="width:22%">Task</th><th>O que faz</th></tr></thead>
+  <tbody>
+    <tr><td><code>criar_schema</code></td><td>Cria as tabelas se não existirem (mesmo modelo de <code>sql/schema_mysql.sql</code>).</td></tr>
+    <tr><td><code>extrair</code></td><td>Baixa com 3 tentativas e espera crescente, valida o zip e os arquivos obrigatórios, calcula o SHA-256, grava no raw.</td></tr>
+    <tr><td><code>versao_nova</code></td><td>Short-circuit: se o SHA-256 for o da última carga bem-sucedida, registra <code>ignorada</code> e pula o resto.</td></tr>
+    <tr><td><code>transformar</code></td><td>Decodifica, tipa, normaliza textos (sem acento, maiúsculo), separa número e sufixo da linha, monta letreiro por sentido, calcula minutos desde o início e distância até a próxima parada (haversine), converte frequências para minutos. Grava Parquet.</td></tr>
+    <tr><td><code>checar_qualidade</code></td><td>18 checagens (seção 5). Falha crítica interrompe o DAG.</td></tr>
+    <tr><td><code>carregar</code></td><td>Uma transação: apaga e insere na ordem das FKs, reconcilia staging × banco, registra a linhagem.</td></tr>
+    <tr><td><code>publicar_pacote_offline</code></td><td>Exporta <code>letreiros.json</code> para o app.</td></tr>
+  </tbody>
+</table>
+<h3><code>citizentech_indicadores_reconhecimento</code> · diário 01:30</h3>
+<table>
+  <thead><tr><th style="width:22%">Task</th><th>O que faz</th></tr></thead>
+  <tbody>
+    <tr><td><code>simular_se_pedido</code></td><td>Só age com o parâmetro <code>simular = true</code>.</td></tr>
+    <tr><td><code>calcular</code></td><td>Recalcula os últimos 7 dias (inclui eventos que chegam atrasados de celulares sem rede): taxa de acerto, alertas para o ônibus errado, latência p50/p95 e acerto à noite, por dia e por origem.</td></tr>
+  </tbody>
+</table>
+
+<h2>5. Qualidade de dados (última execução)</h2>
+{{QUALIDADE}}
+
+<h2>6. Dicionário de dados</h2>
+<p>Gerado de <code>pipeline/schema.py</code> (a mesma definição cria as tabelas e o DDL), com exemplos reais da última carga. Todos os textos estão em UTF-8 (<code>utf8mb4</code> no MySQL). Datas e horas em UTC, exceto <code>hora_inicio</code>/<code>hora_fim</code>, que seguem o GTFS (horário local, podendo passar de 24:00).</p>
+{{DICIONARIO}}
+
+<h2 class="quebra">7. Evidências de execução</h2>
+<h3>7.1 Execução completa (log)</h3>
+<pre>{{LOG1}}</pre>
+<h3>7.2 Segunda execução com o mesmo feed: carga ignorada</h3>
+<pre>{{LOG2}}</pre>
+<h3>7.3 Dados carregados, consultados como o MVP consulta</h3>
+{{EVIDENCIAS}}
+<div class="nota">Os indicadores acima vêm de eventos <b>simulados</b> e servem só para mostrar o DAG 2 funcionando. No pitch, citar apenas números com origem <code>teste_campo</code>, depois que os testes com usuários forem feitos.</div>
+<h3>7.4 Airflow</h3>
+<p>{{PRINTS}}</p>
+
+<h2>8. Segurança, LGPD e limitações</h2>
+<ul>
+  <li><b>Credenciais</b> fora do código: <code>.env</code> (no <code>.gitignore</code>) e GitHub Secrets. MySQL exposto só em <code>127.0.0.1</code>.</li>
+  <li><b>Dados pessoais:</b> o pipeline não recebe nenhum. <code>evento_reconhecimento</code> não tem imagem, coordenada, nome ou telefone; a sessão é um hash SHA-256 de um ID efêmero gerado no aparelho. As imagens são processadas no celular e descartadas.</li>
+  <li><b>IA responsável:</b> o casamento OCR → letreiro marca <code>ambiguo</code> quando dois letreiros empatam (caso real: <code>8000-1</code> e <code>8000-10</code> vão para o mesmo destino). Nesse caso o app não confirma o ônibus.</li>
+  <li><b>Sem tempo real:</b> a espera é estimada pela frequência planejada. Integrar a API Olho Vivo (posição dos ônibus) é o próximo passo.</li>
+  <li><b>Distância</b> entre paradas é em linha reta: serve para antecipar o alerta de descida, não para navegação.</li>
+</ul>
+
+</body>
+</html>
